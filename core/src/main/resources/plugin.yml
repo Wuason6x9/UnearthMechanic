@@ -1,0 +1,11 @@
+name: UnearthMechanic
+version: '${version}'
+main: dev.wuason.unearthMechanic.UnearthMechanic
+api-version: '1.18'
+authors: [ Wuason ]
+website: wiki.techmc.es
+depend:
+  - Mechanics
+softdepend:
+  - ItemsAdder
+  - Oraxen
