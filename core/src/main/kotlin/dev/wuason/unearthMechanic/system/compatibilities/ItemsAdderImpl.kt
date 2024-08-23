@@ -95,6 +95,10 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         return Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")
     }
 
+    override fun name(): String {
+        return "ItemsAdder"
+    }
+
     override fun handleOthersFeatures(
         player: Player,
         event: Event,

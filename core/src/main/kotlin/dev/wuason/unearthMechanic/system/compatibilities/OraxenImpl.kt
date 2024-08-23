@@ -124,6 +124,10 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         return Bukkit.getPluginManager().isPluginEnabled("Oraxen")
     }
 
+    override fun name(): String {
+        return "Oraxen"
+    }
+
     override fun handleOthersFeatures(
         player: Player,
         event: Event,

@@ -3,6 +3,7 @@ package dev.wuason.unearthMechanic.system
 import dev.wuason.mechanics.compatibilities.adapter.Adapter
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.*
+import dev.wuason.unearthMechanic.events.ApplyStageEvent
 import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
 import dev.wuason.unearthMechanic.system.compatibilities.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.OraxenImpl
@@ -71,7 +72,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
     private fun applyStage(player: Player, compatibility: Compatibility, event: Event, loc: Location, toolUsed: String, generic: IGeneric, stage: Int) {
-
+        //event start
+        val eventStage: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
+        Bukkit.getPluginManager().callEvent(eventStage)
+        if (eventStage.isCancelled) return
+        //event end
         if (generic.getStages().isEmpty() || generic.getStages().getOrNull(stage) == null) return
         val stage: IStage = generic.getStages()[stage]
         if (stage.getDrops().isNotEmpty()) dropItems(loc, stage)

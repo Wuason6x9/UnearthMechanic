@@ -12,6 +12,7 @@ import org.bukkit.event.Listener
 interface Compatibility : Listener {
     fun loaded(): Boolean
     fun enabled(): Boolean
+    fun name(): String
 
     fun handleOthersFeatures(player: Player, event: Event, loc: Location, toolUsed: String, generic: IGeneric, stage: IStage)
 

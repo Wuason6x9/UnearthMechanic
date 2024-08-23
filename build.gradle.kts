@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.0.20-RC2"
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("org.gradle.maven-publish")
 }
 
 val targetJavaVersion = 21
@@ -13,6 +14,7 @@ allprojects {
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
     apply(plugin = "com.github.johnrengelman.shadow")
+    apply(plugin = "org.gradle.maven-publish")
 
     repositories {
         mavenCentral()
@@ -41,6 +43,17 @@ project(":api") {
         archiveFileName.set("UnearthMechanic-api-${project.version}.jar")
         archiveClassifier.set("")
         destinationDirectory.set(file("../target"))
+    }
+
+    publishing {
+        publications {
+            create<MavenPublication>("mavenJava") {
+                groupId = rootProject.group.toString()
+                artifactId = rootProject.name
+                version = rootProject.version.toString()
+                artifact(tasks.jar)
+            }
+        }
     }
 }
 
