@@ -128,6 +128,10 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         return "Oraxen"
     }
 
+    override fun adapterId(): String {
+        return "or"
+    }
+
     override fun handleOthersFeatures(
         player: Player,
         event: Event,

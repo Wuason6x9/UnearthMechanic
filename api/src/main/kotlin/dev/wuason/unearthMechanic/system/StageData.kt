@@ -4,6 +4,7 @@ import dev.wuason.libs.jeffmedia.customblockdata.CustomBlockData
 import dev.wuason.libs.jeffmedia.morepersistentdatatypes.DataType
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.IGeneric
+import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
@@ -116,5 +117,14 @@ class StageData(private val location: Location, private val stage: Int, private 
 
     fun getGeneric(): IGeneric {
         return generic
+    }
+
+    fun getActualItemId(): String {
+        return Utils.getActualItemId(this)
+    }
+
+    fun getBackStageData(): StageData? {
+        if (stage == 0) return null
+        return StageData(location, stage - 1, generic)
     }
 }
