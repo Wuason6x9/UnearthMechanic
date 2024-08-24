@@ -6,6 +6,7 @@ import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.events.ApplyStageEvent
 import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
 import dev.wuason.unearthMechanic.system.compatibilities.ItemsAdderImpl
+import dev.wuason.unearthMechanic.system.compatibilities.MinecraftImpl
 import dev.wuason.unearthMechanic.system.compatibilities.OraxenImpl
 import io.th0rgal.oraxen.api.OraxenItems
 import org.bukkit.Bukkit
@@ -20,7 +21,7 @@ import java.util.*
 
 class StageManager(private val core: UnearthMechanic) : IStageManager {
 
-    private val compatibilitiesLoaded: MutableList<Compatibility> = ArrayList()
+    private val compatibilitiesLoaded: MutableList<Compatibility> = arrayListOf(MinecraftImpl(core, this))
 
     private val compatibilities: Array<Compatibility> = arrayOf(
         ItemsAdderImpl(core, this),
@@ -32,8 +33,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         for (compatibility in compatibilities) {
             if (compatibility.loaded()) {
                 compatibilitiesLoaded.add(compatibility)
-                Bukkit.getPluginManager().registerEvents(compatibility, core)
             }
+        }
+
+        compatibilitiesLoaded.forEach { compatibility ->
+            Bukkit.getPluginManager().registerEvents(compatibility, core)
         }
     }
 
@@ -84,11 +88,28 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         compatibility.handleOthersFeatures(player, event, loc, toolUsed, generic, stage)
         stage.getItemId()?.let {
             if (generic is IBlock) {
-                compatibility.handleBlockStage(player, it, event, loc, toolUsed, generic, stage)
+
+                if (isSimilarCompatibility(it, compatibility)) {
+                    compatibility.handleBlockStage(player, it, event, loc, toolUsed, generic, stage)
+                }
+                else {
+                    val c: Compatibility = getCompatibilityByAdapterId(it)?: throw NullPointerException("Compatibility not found for $it")
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    c.handleBlockStage(player, it, event, loc, toolUsed, generic, stage)
+                }
+
             }
 
             else if (generic is IFurniture) {
-                compatibility.handleFurnitureStage(player, it, event, loc, toolUsed, generic, stage)
+
+                if (isSimilarCompatibility(it, compatibility)) {
+                    compatibility.handleFurnitureStage(player, it, event, loc, toolUsed, generic, stage)
+                }
+                else {
+                    val c: Compatibility = getCompatibilityByAdapterId(it)?: throw NullPointerException("Compatibility not found for $it")
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    c.handleFurnitureStage(player, it, event, loc, toolUsed, generic, stage)
+                }
             }
         }
 
@@ -129,6 +150,14 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     override fun getCompatibilities(): Array<Compatibility> {
         return compatibilities
+    }
+
+    override fun getCompatibilityByAdapterId(adapterId: String): Compatibility? {
+        return compatibilitiesLoaded.find { adapterId.contains(it.adapterId(), true) }
+    }
+
+    override fun isSimilarCompatibility(adapterId: String, compatibility: Compatibility): Boolean {
+        return adapterId.contains(compatibility.adapterId(), true)
     }
 
 

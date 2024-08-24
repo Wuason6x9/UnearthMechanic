@@ -13,6 +13,7 @@ interface Compatibility : Listener {
     fun loaded(): Boolean
     fun enabled(): Boolean
     fun name(): String
+    fun adapterId(): String
 
     fun handleOthersFeatures(player: Player, event: Event, loc: Location, toolUsed: String, generic: IGeneric, stage: IStage)
 

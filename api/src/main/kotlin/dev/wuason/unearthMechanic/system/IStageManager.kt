@@ -15,4 +15,8 @@ interface IStageManager {
 
     fun getCompatibilitiesLoaded(): MutableList<Compatibility>
 
+    fun getCompatibilityByAdapterId(adapterId: String): Compatibility?
+
+    fun isSimilarCompatibility(adapterId: String, compatibility: Compatibility): Boolean
+
 }

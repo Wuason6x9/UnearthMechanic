@@ -99,6 +99,10 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         return "ItemsAdder"
     }
 
+    override fun adapterId(): String {
+        return "ia"
+    }
+
     override fun handleOthersFeatures(
         player: Player,
         event: Event,
