@@ -41,7 +41,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                     val sectionBlock: Section = sectionBlocks.getSection(key) ?: continue
                     val id: String = key
                     val baseItemId: String = sectionBlock.getString("base") ?: continue
-                    val tools: Set<String> = sectionBlock.getStringList("tool", listOf("mc:air")).toSet()
+                    val tools: Set<ITool> = sectionBlock.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
 
                     val stages: MutableList<IStage> = mutableListOf()
 
@@ -81,7 +81,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
 
                     generics[id] = block
-                    block.getTools().forEach { tool: String -> putTool(baseItemId, tool, block) }
+                    block.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), block) }
 
                 }
 
@@ -112,7 +112,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                     val sectionFurniture: Section = sectionFurnitures.getSection(key) ?: continue
                     val id = key
                     val baseItemId = sectionFurniture.getString("base") ?: continue
-                    val tools = sectionFurniture.getStringList("tool", listOf("mc:air")).toSet()
+                    val tools: Set<ITool> = sectionFurniture.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
                     val stages: MutableList<IStage> = mutableListOf()
                     val sectionStages = sectionFurniture.getSection("transformation.stages") ?: continue
                     for (keyStage in sectionStages.getRoutesAsStrings(false)) {
@@ -142,7 +142,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                     val furniture = Furniture(id, tools, baseItemId, stages)
                     generics[id] = furniture
 
-                    furniture.getTools().forEach { tool: String -> putTool(baseItemId, tool, furniture) }
+                    furniture.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), furniture) }
 
                 }
 

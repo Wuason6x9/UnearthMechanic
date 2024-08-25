@@ -1,6 +1,6 @@
 package dev.wuason.unearthMechanic.config
 
-open class Generic(private val id: String, private val tools: Set<String>, private val baseItemId: String, private val stages: List<IStage>): IGeneric {
+open class Generic(private val id: String, private val tools: Set<ITool>, private val baseItemId: String, private val stages: List<IStage>): IGeneric {
 
     private val stagesItemsId: HashMap<String, IStage> = HashMap<String, IStage>()
 
@@ -14,7 +14,7 @@ open class Generic(private val id: String, private val tools: Set<String>, priva
         return id
     }
 
-    override fun getTools(): Set<String> {
+    override fun getTools(): Set<ITool> {
         return tools
     }
 
@@ -28,5 +28,13 @@ open class Generic(private val id: String, private val tools: Set<String>, priva
 
     override fun getStagesItemsId(): HashMap<String, IStage> {
         return stagesItemsId
+    }
+
+    override fun getTool(toolId: String): ITool? {
+        return tools.find { it.getItemId().equals(toolId, true) }
+    }
+
+    override fun existsTool(toolId: String): Boolean {
+        return tools.any { it.getItemId().equals(toolId, true) }
     }
 }

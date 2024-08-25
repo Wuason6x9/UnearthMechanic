@@ -1,12 +1,20 @@
 package dev.wuason.unearthMechanic
 
 import dev.wuason.libs.commandapi.CommandAPICommand
+import dev.wuason.libs.commandapi.arguments.BlockStateArgument
+import dev.wuason.libs.commandapi.arguments.IntegerArgument
 import dev.wuason.libs.commandapi.executors.CommandArguments
 import dev.wuason.libs.commandapi.executors.CommandExecutor
 import dev.wuason.libs.commandapi.executors.PlayerCommandExecutor
 import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.system.StageData
+import dev.wuason.unearthMechanic.utils.Utils
+import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
+import org.bukkit.block.data.BlockData
 import org.bukkit.command.CommandSender
+import org.bukkit.util.RayTraceResult
+
 
 class CommandManager(private val core: UnearthMechanic) : ICommandManager {
 
@@ -41,6 +49,35 @@ class CommandManager(private val core: UnearthMechanic) : ICommandManager {
                                 AdventureUtils.sendMessage(player, "<yellow>BaseItem id: <aqua>" + stageData.getGeneric().getBaseItemId())
                                 AdventureUtils.sendMessage(player, "<yellow>Actual item id: <aqua>" + stageData.getActualItemId())
                                 AdventureUtils.sendMessage(player, "<yellow>Loc: <aqua>" + stageData.getLocation())
+                            }),
+                        CommandAPICommand("test")
+                            .withArguments(
+                                BlockStateArgument("block"),
+                                IntegerArgument("size"),
+                                IntegerArgument("deep"),
+                                IntegerArgument("depth")
+                            )
+                            .executesPlayer(PlayerCommandExecutor { player, args ->
+                                val size: Int = args["size"] as Int
+                                val deep: Int = args["deep"] as Int
+                                val depth: Int = args["depth"] as Int
+                                val blockData: BlockData = args["block"] as BlockData
+                                val rayCast: RayTraceResult = player.rayTraceBlocks(10.0)?: run {
+                                    AdventureUtils.sendMessage(player, "<red>You need to look at a block in 10 blocks range")
+                                    return@PlayerCommandExecutor
+                                }
+                                val block: Block = rayCast.hitBlock?: run {
+                                    AdventureUtils.sendMessage(player, "<red>You need to look at a block")
+                                    return@PlayerCommandExecutor
+                                }
+                                val blockFace: BlockFace = rayCast.hitBlockFace?: run {
+                                    AdventureUtils.sendMessage(player, "<red>You need to look at a block face")
+                                    return@PlayerCommandExecutor
+                                }
+                                Utils.blockAround(block, size, deep, depth, player, blockFace).forEach {
+                                    it.type = blockData.material
+                                    it.blockData = blockData
+                                }
                             })
                     )
             )

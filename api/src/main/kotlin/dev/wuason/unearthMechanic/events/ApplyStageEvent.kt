@@ -1,6 +1,7 @@
 package dev.wuason.unearthMechanic.events
 
 import dev.wuason.unearthMechanic.config.IGeneric
+import dev.wuason.unearthMechanic.config.ITool
 import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -8,7 +9,7 @@ import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
-class ApplyStageEvent(private val player: Player, private val compatibility: Compatibility, private val event: Event, private val loc: Location, private val toolUsed: String, private val generic: IGeneric, private val stage: Int): Event(), Cancellable {
+class ApplyStageEvent(private val player: Player, private val compatibility: Compatibility, private val event: Event, private val loc: Location, private val toolUsed: ITool, private val generic: IGeneric, private val stage: Int): Event(), Cancellable {
 
     //handler list
     companion object {
@@ -80,7 +81,7 @@ class ApplyStageEvent(private val player: Player, private val compatibility: Com
      * @return the tool used in the event
      */
 
-    fun getToolUsed(): String {
+    fun getToolUsed(): ITool {
         return toolUsed
     }
 
