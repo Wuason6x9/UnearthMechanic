@@ -40,7 +40,9 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     val sectionBlock: Section = sectionBlocks.getSection(key) ?: continue
                     val id: String = key
-                    val baseItemId: String = sectionBlock.getString("base") ?: continue
+                    //val baseItemId: String = sectionBlock.getString("base") ?: continue
+                    val basesItemId: List<String> = sectionBlock.getStringList("base", emptyList()) ?: continue
+
                     val tools: Set<ITool> = sectionBlock.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
 
                     val stages: MutableList<IStage> = mutableListOf()
@@ -77,11 +79,12 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     }
 
-                    val block: Block = Block(id, tools, baseItemId, stages)
+                    for (baseItemId in basesItemId) {
+                        val block: Block = Block(id, tools, baseItemId, stages)
 
-
-                    generics[id] = block
-                    block.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), block) }
+                        generics[id] = block
+                        block.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), block) }
+                    }
 
                 }
 
