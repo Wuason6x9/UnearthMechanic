@@ -40,8 +40,13 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     val sectionBlock: Section = sectionBlocks.getSection(key) ?: continue
                     val id: String = key
-                    //val baseItemId: String = sectionBlock.getString("base") ?: continue
-                    val basesItemId: List<String> = sectionBlock.getStringList("base", emptyList()) ?: continue
+                    val basesItemId: ArrayList<String> = ArrayList()
+                    val baseItemId = sectionBlock.get("base")?: continue
+                    if (baseItemId is String) {
+                        basesItemId.add(baseItemId)
+                    } else if (baseItemId is List<*>) {
+                        basesItemId.addAll(baseItemId as List<String>)
+                    }
 
                     val tools: Set<ITool> = sectionBlock.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
 
@@ -79,10 +84,15 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     }
 
-                    for (baseItemId in basesItemId) {
-                        val block: Block = Block(id, tools, baseItemId, stages)
-
-                        generics[id] = block
+                    for ((i, baseItemId) in basesItemId.withIndex()) {
+                        var cid = getCorrectId(id)
+                        if (basesItemId.size > 1) {
+                            if (cid.equals(id)) {
+                                cid = "${id}_${i}"
+                            }
+                        }
+                        val block: Block = Block(cid, tools, baseItemId, stages)
+                        generics[block.getId()] = block
                         block.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), block) }
                     }
 
@@ -93,8 +103,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
         }
 
         AdventureUtils.sendMessagePluginConsole(core,
-            "<aqua> Blocks loaded: <yellow>" + generics.values.stream().filter { generic: IGeneric -> generic is IBlock }
-                .count())
+            "<aqua> Blocks loaded: <yellow>" + generics.count { it.value is IBlock })
 
     }
 
@@ -114,7 +123,15 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     val sectionFurniture: Section = sectionFurnitures.getSection(key) ?: continue
                     val id = key
-                    val basesItemId: List<String> = sectionFurniture.getStringList("base", emptyList()) ?: continue
+                    val basesItemId: ArrayList<String> = ArrayList()
+
+                    val baseItemId = sectionFurniture.get("base")?: continue
+                    if (baseItemId is String) {
+                        basesItemId.add(baseItemId)
+                    } else if (baseItemId is List<*>) {
+                        basesItemId.addAll(baseItemId as List<String>)
+                    }
+
                     val tools: Set<ITool> = sectionFurniture.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
                     val stages: MutableList<IStage> = mutableListOf()
                     val sectionStages = sectionFurniture.getSection("transformation.stages") ?: continue
@@ -142,22 +159,24 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         )
                         stages.add(stage)
                     }
-                    for (baseItemId in basesItemId) {
-                        val furniture = Furniture(id, tools, baseItemId, stages)
-                        generics[id] = furniture
 
+                    for ((i, baseItemId) in basesItemId.withIndex()) {
+                        var cid = getCorrectId(id)
+                        if (basesItemId.size > 1) {
+                            if (cid.equals(id)) {
+                                cid = "${id}_${i}"
+                            }
+                        }
+                        val furniture = Furniture(cid, tools, baseItemId, stages)
+                        generics[furniture.getId()] = furniture
                         furniture.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), furniture) }
                     }
-
                 }
-
             }
         }
 
-
         AdventureUtils.sendMessagePluginConsole(core,
-            "<aqua> Furniture loaded: <yellow>" + generics.values.stream().filter { generic: IGeneric -> generic is IFurniture }
-                .count())
+            "<aqua> Furniture loaded: <yellow>" + generics.count { it.value is IFurniture })
     }
 
     private fun putTool(baseItemId: String, tool: String, generic: IGeneric) {
@@ -171,7 +190,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
     }
 
     override fun validTool(baseItemId: String, tool: String): Boolean {
-        return genericsBaseItemId.containsKey(baseItemId) && genericsBaseItemId[baseItemId]?.containsKey(if ( tool.equals("HAND", true) ) tool.uppercase(Locale.ENGLISH) else tool) ?: false
+        return genericsBaseItemId.containsKey(baseItemId) && genericsBaseItemId[baseItemId]?.containsKey(tool) ?: false
     }
 
     override fun validBaseItemId(baseItemId: String): Boolean {
@@ -189,5 +208,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
     override fun getGenericsBaseItemId(): HashMap<String, HashMap<String, IGeneric>> {
         return genericsBaseItemId
+    }
+
+    private fun getCorrectId(id: String): String {
+        val split = id.split(";")
+        return if (split.size == 2 && split[1].isNotBlank()) "${id}_${split[1]}" else id
     }
 }
