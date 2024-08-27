@@ -3,10 +3,7 @@ package dev.wuason.unearthMechanic.system.compatibilities
 import dev.wuason.mechanics.utils.VersionDetector
 import dev.wuason.mechanics.utils.VersionDetector.ServerVersion
 import dev.wuason.unearthMechanic.UnearthMechanic
-import dev.wuason.unearthMechanic.config.IBlock
-import dev.wuason.unearthMechanic.config.IFurniture
-import dev.wuason.unearthMechanic.config.IGeneric
-import dev.wuason.unearthMechanic.config.IStage
+import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import io.th0rgal.oraxen.api.OraxenBlocks
@@ -110,12 +107,6 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         OraxenFurniture.remove(entity, player, Drop(mutableListOf(), false, false, id))
     }
 
-    /*private fun getRotation(yaw: Double, restricted: Boolean): Rotation {
-        var id = (((Location.normalizeYaw(yaw.toFloat()) + 180) * 8 / 360) + 0.5).toInt() % 8
-        if (restricted && id % 2 != 0) id -= 1
-        return Rotation.entries[id]
-    }*/
-
     override fun loaded(): Boolean {
         return Bukkit.getPluginManager().getPlugin("Oraxen") != null
     }
@@ -136,7 +127,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -184,7 +175,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -196,7 +187,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -210,7 +201,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {

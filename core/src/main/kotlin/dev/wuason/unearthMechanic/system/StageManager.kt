@@ -8,15 +8,19 @@ import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
 import dev.wuason.unearthMechanic.system.compatibilities.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.MinecraftImpl
 import dev.wuason.unearthMechanic.system.compatibilities.OraxenImpl
-import io.th0rgal.oraxen.api.OraxenItems
+import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
+import org.bukkit.event.block.Action
+import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.Damageable
+import org.bukkit.util.RayTraceResult
 import java.util.*
 
 class StageManager(private val core: UnearthMechanic) : IStageManager {
@@ -58,12 +62,26 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     }
 
-    private fun interactExist(player: Player, itemId: String, location: Location, event: Event, compatibility: Compatibility, storageData: StageData, toolUsed: String) {
-        if (!storageData.getGeneric().getTools().contains(toolUsed)) return
+    private fun multipleInteract(player: Player, generic: IGeneric, location: Location, event: Event, compatibility: Compatibility, toolUsed: ITool, stage: IStage) {
+        if (toolUsed.isMultiple() && !StageData.hasMultiple(location)) {
+            val rayCast: RayTraceResult = player.rayTraceBlocks(location.distance(player.location)) ?: return
+            val blockFace: BlockFace = rayCast.hitBlockFace ?: return
+            Utils.blockAround(location.block, toolUsed.getSize(), toolUsed.getDeep(), toolUsed.getDepth(), player, blockFace).forEach { block ->
+                StageData.applyMultiple(block)
+                val playerInteractEvent: Event = PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, player.inventory.itemInMainHand, block, blockFace, EquipmentSlot.HAND)
+                Bukkit.getPluginManager().callEvent(playerInteractEvent)
+                StageData.removeMultiple(block)
+            }
+        }
+    }
+
+    private fun interactExist(player: Player, itemId: String, location: Location, event: Event, compatibility: Compatibility, stageData: StageData, toolUsed: String) {
+        if (!stageData.getGeneric().existsTool(toolUsed)) return
         if (event is Cancellable) {
             event.isCancelled = true
         }
-        applyStage(player, compatibility, event, location, toolUsed, storageData.getGeneric(), storageData.getStage())
+        val iTool: ITool = stageData.getGeneric().getTool(toolUsed) ?: throw NullPointerException("Tool not found for $toolUsed in ${stageData.getGeneric().getId()} mabye is duplicated config")
+        applyStage(player, compatibility, event, location, iTool, stageData.getGeneric(), stageData.getStage())
     }
 
     private fun interactNotExist(player: Player, baseItemId: String, location: Location, event: Event, compatibility: Compatibility, toolUsed: String) {
@@ -72,30 +90,32 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         if (event is Cancellable) {
             event.isCancelled = true
         }
-        applyStage(player, compatibility, event, location, toolUsed, generic, 0)
+        val iTool: ITool = generic.getTool(toolUsed) ?: throw NullPointerException("Tool not found for $toolUsed in ${generic.getId()} mabye is duplicated config")
+        applyStage(player, compatibility, event, location, iTool, generic, 0)
     }
 
-    private fun applyStage(player: Player, compatibility: Compatibility, event: Event, loc: Location, toolUsed: String, generic: IGeneric, stage: Int) {
+    private fun applyStage(player: Player, compatibility: Compatibility, event: Event, loc: Location, toolUsed: ITool, generic: IGeneric, stage: Int) {
         //event start
         val eventStage: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
         Bukkit.getPluginManager().callEvent(eventStage)
         if (eventStage.isCancelled) return
         //event end
         if (generic.getStages().isEmpty() || generic.getStages().getOrNull(stage) == null) return
-        val stage: IStage = generic.getStages()[stage]
-        if (stage.getDrops().isNotEmpty()) dropItems(loc, stage)
-        if (stage.isRemoveItemMainHand()) player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-        compatibility.handleOthersFeatures(player, event, loc, toolUsed, generic, stage)
-        stage.getItemId()?.let {
+        val iStage: IStage = generic.getStages()[stage]
+        multipleInteract(player, generic, loc, event, compatibility, toolUsed, iStage)
+        if (iStage.getDrops().isNotEmpty()) dropItems(loc, iStage)
+        if (iStage.isRemoveItemMainHand()) player.inventory.setItemInMainHand(ItemStack(Material.AIR))
+        compatibility.handleOthersFeatures(player, event, loc, toolUsed, generic, iStage)
+        iStage.getItemId()?.let {
             if (generic is IBlock) {
 
                 if (isSimilarCompatibility(it, compatibility)) {
-                    compatibility.handleBlockStage(player, it, event, loc, toolUsed, generic, stage)
+                    compatibility.handleBlockStage(player, it, event, loc, toolUsed, generic, iStage)
                 }
                 else {
                     val c: Compatibility = getCompatibilityByAdapterId(it)?: throw NullPointerException("Compatibility not found for $it")
-                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                    c.handleBlockStage(player, it, event, loc, toolUsed, generic, stage)
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, iStage)
+                    c.handleBlockStage(player, it, event, loc, toolUsed, generic, iStage)
                 }
 
             }
@@ -103,24 +123,24 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
             else if (generic is IFurniture) {
 
                 if (isSimilarCompatibility(it, compatibility)) {
-                    compatibility.handleFurnitureStage(player, it, event, loc, toolUsed, generic, stage)
+                    compatibility.handleFurnitureStage(player, it, event, loc, toolUsed, generic, iStage)
                 }
                 else {
                     val c: Compatibility = getCompatibilityByAdapterId(it)?: throw NullPointerException("Compatibility not found for $it")
-                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                    c.handleFurnitureStage(player, it, event, loc, toolUsed, generic, stage)
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, iStage)
+                    c.handleFurnitureStage(player, it, event, loc, toolUsed, generic, iStage)
                 }
             }
         }
 
 
-        if (stage.isRemove() || isLastStage(generic, stage)) {
-            if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+        if (iStage.isRemove() || isLastStage(generic, iStage)) {
+            if (iStage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, iStage)
             StageData.removeStageData(loc)
             return
         }
 
-        StageData.saveStageData(loc, StageData(loc, stage.getStage() + 1, generic))
+        StageData.saveStageData(loc, StageData(loc, iStage.getStage() + 1, generic))
 
     }
 

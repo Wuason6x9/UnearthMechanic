@@ -10,15 +10,19 @@ import dev.wuason.unearthMechanic.system.StageManager
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 import java.util.*
+import kotlin.math.absoluteValue
 import kotlin.math.min
 
 class MinecraftImpl(private val core: UnearthMechanic, private val stageManager: StageManager): Compatibility {
@@ -40,7 +44,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
 
     @EventHandler
     fun onInteractBlock(event: PlayerInteractEvent) {
-        if (event.hasBlock() && event.hand == EquipmentSlot.HAND && event.action.isRightClick) {
+        if (event.hasBlock() && event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() == Event.Result.ALLOW) {
             val block: Block = event.clickedBlock?: return
             val adapterId = Adapter.getAdapterIdBasic(block)?: throw NullPointerException("Adapter ID not found")
             if (adapterId.contains("mc:")) stageManager.interact(event.player, adapterId, block.location, event, this)
@@ -57,12 +61,11 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
     }
 
 
-
     override fun handleOthersFeatures(
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -110,7 +113,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -122,7 +125,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -133,7 +136,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {

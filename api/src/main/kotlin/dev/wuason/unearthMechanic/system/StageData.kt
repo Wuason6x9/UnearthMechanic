@@ -16,7 +16,8 @@ class StageData(private val location: Location, private val stage: Int, private 
         val NAMESPACED_ID_KEY: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "id")
         val NAMESPACED_CUR_STAGE_KEY: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "current_stage")
         val NAMESPACED_KEY: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "stage")
-        val NAMESPACED_SAFE_DELETE_KEY: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "stage")
+        val NAMESPACED_SAFE_DELETE_KEY: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "stageSafeRemove")
+        val NAMESPACED_MULTIPLE: NamespacedKey = NamespacedKey(UnearthMechanicPlugin.getInstance(), "stageMultiple")
 
         fun applySafeDelete(loc: Location) {
             val block: Block = loc.block
@@ -47,6 +48,37 @@ class StageData(private val location: Location, private val stage: Int, private 
             if (!hasSafeDelete(block)) return
             val data: PersistentDataContainer = CustomBlockData(block, UnearthMechanicPlugin.getInstance())
             data.remove(NAMESPACED_SAFE_DELETE_KEY)
+        }
+
+        fun applyMultiple(loc: Location) {
+            val block: Block = loc.block
+            applyMultiple(block)
+        }
+
+        fun applyMultiple(block: Block) {
+            val data: PersistentDataContainer = CustomBlockData(block, UnearthMechanicPlugin.getInstance())
+            data.set(NAMESPACED_MULTIPLE, DataType.BOOLEAN, true)
+        }
+
+        fun hasMultiple(loc: Location): Boolean {
+            val block: Block = loc.block
+            return hasMultiple(block)
+        }
+
+        fun hasMultiple(block: Block): Boolean {
+            return CustomBlockData.hasCustomBlockData(block, UnearthMechanicPlugin.getInstance()) && CustomBlockData(block, UnearthMechanicPlugin.getInstance()).has(
+                NAMESPACED_MULTIPLE, DataType.BOOLEAN)
+        }
+
+        fun removeMultiple(loc: Location) {
+            val block: Block = loc.block
+            removeMultiple(block)
+        }
+
+        fun removeMultiple(block: Block) {
+            if (!hasMultiple(block)) return
+            val data: PersistentDataContainer = CustomBlockData(block, UnearthMechanicPlugin.getInstance())
+            data.remove(NAMESPACED_MULTIPLE)
         }
 
         fun fromBlock(block: Block): StageData? {

@@ -10,10 +10,7 @@ import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
 import dev.wuason.mechanics.utils.VersionDetector
 import dev.wuason.mechanics.utils.VersionDetector.ServerVersion
 import dev.wuason.unearthMechanic.UnearthMechanic
-import dev.wuason.unearthMechanic.config.IBlock
-import dev.wuason.unearthMechanic.config.IFurniture
-import dev.wuason.unearthMechanic.config.IGeneric
-import dev.wuason.unearthMechanic.config.IStage
+import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import org.bukkit.Bukkit
@@ -107,7 +104,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -164,7 +161,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -176,7 +173,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -198,7 +195,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: String,
+        toolUsed: ITool,
         generic: IGeneric,
         stage: IStage
     ) {
