@@ -85,15 +85,15 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                     }
 
                     for ((i, baseItemId) in basesItemId.withIndex()) {
-                        var cid = getCorrectId(id)
+                        var cid = getCorrectId(id, baseItemId)
                         if (basesItemId.size > 1) {
                             if (cid.equals(id)) {
                                 cid = "${id}_${i}"
                             }
                         }
-                        val block: Block = Block(cid, tools, baseItemId, stages)
+                        val block: Block = Block(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages)
                         generics[block.getId()] = block
-                        block.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), block) }
+                        block.getTools().forEach { tool: ITool -> putTool(block.getBaseItemId(), tool.getItemId(), block) }
                     }
 
                 }
@@ -161,15 +161,15 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                     }
 
                     for ((i, baseItemId) in basesItemId.withIndex()) {
-                        var cid = getCorrectId(id)
+                        var cid = getCorrectId(id, baseItemId)
                         if (basesItemId.size > 1) {
                             if (cid.equals(id)) {
                                 cid = "${id}_${i}"
                             }
                         }
-                        val furniture = Furniture(cid, tools, baseItemId, stages)
+                        val furniture = Furniture(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages)
                         generics[furniture.getId()] = furniture
-                        furniture.getTools().forEach { tool: ITool -> putTool(baseItemId, tool.getItemId(), furniture) }
+                        furniture.getTools().forEach { tool: ITool -> putTool(furniture.getBaseItemId(), tool.getItemId(), furniture) }
                     }
                 }
             }
@@ -210,8 +210,8 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
         return genericsBaseItemId
     }
 
-    private fun getCorrectId(id: String): String {
-        val split = id.split(";")
-        return if (split.size == 2 && split[1].isNotBlank()) "${id}_${split[1]}" else id
+    private fun getCorrectId(id: String, baseItemId: String): String {
+        val split = baseItemId.split(";")
+        return if (split.size >= 2 && split[1].isNotBlank()) "${id}_${split[1]}" else id
     }
 }
