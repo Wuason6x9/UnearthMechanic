@@ -107,6 +107,9 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         if (iStage.getDrops().isNotEmpty()) dropItems(loc, iStage)
         if (iStage.getItems().isNotEmpty()) addItems(player, iStage)
         if (iStage.isRemoveItemMainHand()) player.inventory.setItemInMainHand(ItemStack(Material.AIR))
+        if (iStage.getReduceItemHand() != 0) player.inventory.itemInMainHand.let {
+            if(!it.type.isAir) it.subtract(iStage.getReduceItemHand())
+        }
         compatibility.handleOthersFeatures(player, event, loc, toolUsed, generic, iStage)
         iStage.getItemId()?.let {
             if (generic is IBlock) {
