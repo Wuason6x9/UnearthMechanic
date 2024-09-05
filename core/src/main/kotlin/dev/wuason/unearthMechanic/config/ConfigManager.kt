@@ -69,6 +69,12 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
                         val usagesIaToRemove = sectionStage.getInt("reduce_usages_ia", 0)
                         val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
+                        val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
+                        val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
+                        val items: List<Item> = sectionStage.getStringList("items_add", emptyList()).map {
+                            val split: List<String> = it.split(";")
+                            Item(split[0], split[1], split[2].toInt())
+                        }
                         val stage: Stage = Stage(
                             stages.size,
                             blockId,
@@ -77,7 +83,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             removeItemMainHand,
                             durabilityToRemove,
                             usagesIaToRemove,
-                            onlyOneDrop
+                            onlyOneDrop,
+                            reduceItemMainHand,
+                            items,
+                            onlyOneItem
                         )
 
                         stages.add(stage)
@@ -147,6 +156,12 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
                         val usagesIaToRemove = sectionStage.getInt("reduce_usages_ia", 0)
                         val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
+                        val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
+                        val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
+                        val items: List<Item> = sectionStage.getStringList("items_add", emptyList()).map {
+                            val split: List<String> = it.split(";")
+                            Item(split[0], split[1], split[2].toInt())
+                        }
                         val stage = Stage(
                             stages.size,
                             furnitureId,
@@ -155,7 +170,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             removeItemMainHand,
                             durabilityToRemove,
                             usagesIaToRemove,
-                            onlyOneDrop
+                            onlyOneDrop,
+                            reduceItemMainHand,
+                            items,
+                            onlyOneItem
                         )
                         stages.add(stage)
                     }

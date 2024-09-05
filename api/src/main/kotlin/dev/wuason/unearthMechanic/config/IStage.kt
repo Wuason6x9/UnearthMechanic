@@ -17,4 +17,11 @@ interface IStage {
     fun isRemoveItemMainHand(): Boolean
 
     fun getDrops(): List<IDrop>
+
+    fun getReduceItemHand(): Int
+
+    fun getItems(): List<IItem>
+
+    fun isOnlyOneItem(): Boolean
+
 }

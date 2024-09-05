@@ -3,7 +3,8 @@ package dev.wuason.unearthMechanic.config
 class Stage(
     private val stage: Int, private val itemId: String?, private val drops: List<Drop>, private val remove: Boolean, private val removeItemMainHand: Boolean,
     private val durabilityToRemove: Int,
-    private val usagesIaToRemove: Int, private val onlyOneDrop: Boolean
+    private val usagesIaToRemove: Int, private val onlyOneDrop: Boolean,
+    private val reduceItemHand: Int, private val items: List<Item>, private val onlyOneItem: Boolean
 ) : IStage {
 
     override fun isRemoveItemMainHand(): Boolean {
@@ -36,5 +37,17 @@ class Stage(
 
     override fun getDrops(): List<Drop> {
         return drops
+    }
+
+    override fun getReduceItemHand(): Int {
+        return reduceItemHand
+    }
+
+    override fun getItems(): List<Item> {
+        return items
+    }
+
+    override fun isOnlyOneItem(): Boolean {
+        return onlyOneItem
     }
 }

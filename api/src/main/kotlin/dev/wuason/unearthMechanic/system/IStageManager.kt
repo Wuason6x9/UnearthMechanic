@@ -4,6 +4,7 @@ import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
 import org.bukkit.Location
+import org.bukkit.entity.Player
 
 interface IStageManager {
 
@@ -18,5 +19,7 @@ interface IStageManager {
     fun getCompatibilityByAdapterId(adapterId: String): Compatibility?
 
     fun isSimilarCompatibility(adapterId: String, compatibility: Compatibility): Boolean
+
+    fun addItems(player: Player, stage: IStage)
 
 }
