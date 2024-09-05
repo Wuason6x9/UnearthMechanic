@@ -1,6 +1,7 @@
 package dev.wuason.unearthMechanic.system
 
 import dev.wuason.mechanics.compatibilities.adapter.Adapter
+import dev.wuason.mechanics.utils.StorageUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.events.ApplyStageEvent
@@ -104,6 +105,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         val iStage: IStage = generic.getStages()[stage]
         multipleInteract(player, generic, loc, event, compatibility, toolUsed, iStage)
         if (iStage.getDrops().isNotEmpty()) dropItems(loc, iStage)
+        if (iStage.getItems().isNotEmpty()) addItems(player, iStage)
         if (iStage.isRemoveItemMainHand()) player.inventory.setItemInMainHand(ItemStack(Material.AIR))
         compatibility.handleOthersFeatures(player, event, loc, toolUsed, generic, iStage)
         iStage.getItemId()?.let {
@@ -161,6 +163,19 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         stage.getDrops().forEach { drop ->
             drop.getItemStackChance()?.let { loc.world.dropItem(loc, it) }
+        }
+    }
+
+    override fun addItems(player: Player, stage: IStage) {
+        if (stage.isOnlyOneItem() && stage.getItems().isNotEmpty()) {
+            val randomIndex: Int = Random().nextInt(stage.getItems().size)
+            val item: ItemStack = stage.getItems()[randomIndex].getItemStack()
+            StorageUtils.addItemToInventoryOrDrop(player, item)
+            return
+        }
+
+        stage.getItems().forEach { item ->
+            item.getItemStackChance()?.let { StorageUtils.addItemToInventoryOrDrop(player, it) }
         }
     }
 

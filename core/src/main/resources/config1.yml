@@ -18,6 +18,10 @@ unearth:
             #remove_item_main_hand: true
             #reduce_durability: 100
             #reduce_usages_ia: 1
+            #reduce_item_main_hand: 1
+            #only_one_add: true
+            #items_add:
+            #  - "ia:elitefantasy:fish_destroyed_1;1-64;55"
     fish_destroyed:
       base:
         - "ia:elitefantasy:fish_destroyed_sand_1" #Item base
