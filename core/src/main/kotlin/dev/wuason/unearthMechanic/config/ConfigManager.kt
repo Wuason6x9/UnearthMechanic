@@ -7,9 +7,9 @@ import dev.wuason.libs.boostedyaml.settings.general.GeneralSettings
 import dev.wuason.libs.boostedyaml.settings.loader.LoaderSettings
 import dev.wuason.libs.boostedyaml.settings.updater.UpdaterSettings
 import dev.wuason.mechanics.utils.AdventureUtils
-import dev.wuason.mechanics.utils.Utils
 import dev.wuason.unearthMechanic.UnearthMechanic
 import java.io.File
+import java.lang.reflect.Constructor
 import java.util.Locale
 
 class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
@@ -18,48 +18,56 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
     private val genericsBaseItemId: HashMap<String, HashMap<String, IGeneric>> = HashMap()
 
     override fun loadConfig() {
-        generics.clear()
-        genericsBaseItemId.clear()
 
-        loadBlockConfig()
-        loadFurnitureConfig()
     }
 
-    fun loadBlockConfig() {
+    private fun getAllFilesRecursive(file: File): List<File> {
+        val files = mutableListOf<File>()
+        file.listFiles()?.forEach {
+            if (it.isDirectory) {
+                files.addAll(getAllFilesRecursive(it))
+            } else {
+                files.add(it)
+            }
+        }
+        return files
+    }
+
+    fun loadConfig(type: GenericType) {
+        generics.filter { type.getClazz().isInstance(it.value) }.forEach { generics.remove(it.key) }
         val base = File(core.dataFolder.path)
         base.mkdirs()
-        val files: Array<File> = base.listFiles { file: File -> file.name.endsWith(".yml") } ?: return
-
+        val files: List<File> = getAllFilesRecursive(base).filter { it.name.endsWith(".yml") }
         for (file in files) {
 
             val config = YamlDocument.create(file, GeneralSettings.DEFAULT, LoaderSettings.DEFAULT, DumperSettings.DEFAULT, UpdaterSettings.DEFAULT)
 
-            config.getSection("unearth.block")?.let { sectionBlocks ->
+            config.getSection("unearth.${type.getRoute()}")?.let { sectionGenerics ->
 
-                for (key in sectionBlocks.getRoutesAsStrings(false)) {
+                for (key in sectionGenerics.getRoutesAsStrings(false)) {
 
-                    val sectionBlock: Section = sectionBlocks.getSection(key) ?: continue
+                    val sectionGeneric: Section = sectionGenerics.getSection(key) ?: continue
                     val id: String = key
                     val basesItemId: ArrayList<String> = ArrayList()
-                    val baseItemId = sectionBlock.get("base")?: continue
+                    val baseItemId = sectionGeneric.get("base")?: continue
                     if (baseItemId is String) {
                         basesItemId.add(baseItemId)
                     } else if (baseItemId is List<*>) {
                         basesItemId.addAll(baseItemId as List<String>)
                     }
 
-                    val tools: Set<ITool> = sectionBlock.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
+                    val tools: Set<ITool> = sectionGeneric.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
 
                     val stages: MutableList<IStage> = mutableListOf()
 
-                    val sectionStages: Section = sectionBlock.getSection("transformation.stages") ?: continue
+                    val sectionStages: Section = sectionGeneric.getSection("transformation.stages") ?: continue
 
                     for (keyStage in sectionStages.getRoutesAsStrings(false)) {
 
 
                         val sectionStage: Section = sectionStages.getSection(keyStage) ?: continue
 
-                        val blockId: String? = sectionStage.getString("block_id")
+                        val itemStageId: String? = sectionStage.getString("${type.getRoute()}_id")
                         val remove: Boolean = sectionStage.getBoolean("remove", false)
                         val drops: List<Drop> = sectionStage.getStringList("drops", emptyList()).map {
                             val split: List<String> = it.split(";")
@@ -71,13 +79,25 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
                         val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
                         val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
+                        val delay: Long = sectionStage.getLong("delay", 0)
+                        val toolAnimDelay = sectionStage.getBoolean("tool_anim_on_delay", false)
                         val items: List<Item> = sectionStage.getStringList("items_add", emptyList()).map {
                             val split: List<String> = it.split(";")
                             Item(split[0], split[1], split[2].toInt())
+                        }
+
+                        val sounds: List<Sound> = sectionStage.getMapList("sounds", emptyList()).filter {
+                            it.containsKey("sound") && it["sound"] is String && (it["sound"] as String).isNotBlank()
+                        }.map {
+                            val sound = it["sound"] as String
+                            val volume = it.getOrDefault("volume", 1.0) as Number
+                            val pitch = it.getOrDefault("pitch", 1.0) as Number
+                            val delay = it.getOrDefault("delay", 0) as Number
+                            Sound(sound, volume.toFloat(), pitch.toFloat(), delay.toLong())
                         }
                         val stage: Stage = Stage(
                             stages.size,
-                            blockId,
+                            itemStageId,
                             drops,
                             remove,
                             removeItemMainHand,
@@ -86,7 +106,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             onlyOneDrop,
                             reduceItemMainHand,
                             items,
-                            onlyOneItem
+                            onlyOneItem,
+                            sounds,
+                            delay,
+                            toolAnimDelay
                         )
 
                         stages.add(stage)
@@ -100,9 +123,14 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                                 cid = "${id}_${i}"
                             }
                         }
-                        val block: Block = Block(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages)
-                        generics[block.getId()] = block
-                        block.getTools().forEach { tool: ITool -> putTool(block.getBaseItemId(), tool.getItemId(), block) }
+
+                        val constructor: Constructor<*> = type.getClazz().declaredConstructors[0]
+
+                        val generic: IGeneric = constructor.newInstance(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages) as IGeneric
+
+                        generics[generic.getId()] = generic
+
+                        generic.getTools().forEach { tool: ITool -> putTool(generic.getBaseItemId(), tool.getItemId(), generic) }
                     }
 
                 }
@@ -111,90 +139,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
         }
 
-        AdventureUtils.sendMessagePluginConsole(core,
-            "<aqua> Blocks loaded: <yellow>" + generics.count { it.value is IBlock })
-
-    }
-
-    fun loadFurnitureConfig() {
-
-        val base: File = File(core.dataFolder.path)
-        base.mkdirs()
-        val files: Array<File> = base.listFiles { file: File -> file.name.endsWith(".yml") } ?: return
-
-        for (file in files) {
-
-            val config = YamlDocument.create(file, GeneralSettings.DEFAULT, LoaderSettings.DEFAULT, DumperSettings.DEFAULT, UpdaterSettings.DEFAULT)
-
-            config.getSection("unearth.furniture")?.let { sectionFurnitures ->
-
-                for (key in sectionFurnitures.getRoutesAsStrings(false)) {
-
-                    val sectionFurniture: Section = sectionFurnitures.getSection(key) ?: continue
-                    val id = key
-                    val basesItemId: ArrayList<String> = ArrayList()
-
-                    val baseItemId = sectionFurniture.get("base")?: continue
-                    if (baseItemId is String) {
-                        basesItemId.add(baseItemId)
-                    } else if (baseItemId is List<*>) {
-                        basesItemId.addAll(baseItemId as List<String>)
-                    }
-
-                    val tools: Set<ITool> = sectionFurniture.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
-                    val stages: MutableList<IStage> = mutableListOf()
-                    val sectionStages = sectionFurniture.getSection("transformation.stages") ?: continue
-                    for (keyStage in sectionStages.getRoutesAsStrings(false)) {
-                        val sectionStage = sectionStages.getSection(keyStage) ?: continue
-                        val furnitureId: String? = sectionStage.getString("furniture_id")
-                        val remove = sectionStage.getBoolean("remove", false)
-                        val drops = sectionStage.getStringList("drops", emptyList()).map {
-                            val split = it.split(";")
-                            Drop(split[0], split[1], split[2].toInt())
-                        }
-                        val removeItemMainHand = sectionStage.getBoolean("remove_item_main_hand", false)
-                        val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
-                        val usagesIaToRemove = sectionStage.getInt("reduce_usages_ia", 0)
-                        val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
-                        val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
-                        val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
-                        val items: List<Item> = sectionStage.getStringList("items_add", emptyList()).map {
-                            val split: List<String> = it.split(";")
-                            Item(split[0], split[1], split[2].toInt())
-                        }
-                        val stage = Stage(
-                            stages.size,
-                            furnitureId,
-                            drops,
-                            remove,
-                            removeItemMainHand,
-                            durabilityToRemove,
-                            usagesIaToRemove,
-                            onlyOneDrop,
-                            reduceItemMainHand,
-                            items,
-                            onlyOneItem
-                        )
-                        stages.add(stage)
-                    }
-
-                    for ((i, baseItemId) in basesItemId.withIndex()) {
-                        var cid = getCorrectId(id, baseItemId)
-                        if (basesItemId.size > 1) {
-                            if (cid.equals(id)) {
-                                cid = "${id}_${i}"
-                            }
-                        }
-                        val furniture = Furniture(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages)
-                        generics[furniture.getId()] = furniture
-                        furniture.getTools().forEach { tool: ITool -> putTool(furniture.getBaseItemId(), tool.getItemId(), furniture) }
-                    }
-                }
-            }
-        }
-
-        AdventureUtils.sendMessagePluginConsole(core,
-            "<aqua> Furniture loaded: <yellow>" + generics.count { it.value is IFurniture })
+        AdventureUtils.sendMessagePluginConsole(core, "<aqua> ${type.getName()} loaded: <yellow>${generics.count { type.getClazz().isInstance(it.value) }}")
     }
 
     private fun putTool(baseItemId: String, tool: String, generic: IGeneric) {
@@ -231,5 +176,22 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
     private fun getCorrectId(id: String, baseItemId: String): String {
         val split = baseItemId.split(";")
         return if (split.size >= 2 && split[1].isNotBlank()) "${id}_${split[1]}" else id
+    }
+
+    enum class GenericType(private val route: String, private val clazz: Class<out Generic>) {
+        BLOCK("block", Block::class.java),
+        FURNITURE("furniture", Furniture::class.java);
+
+        fun getName(): String {
+            return route.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ENGLISH) else it.toString() }
+        }
+
+        fun getRoute(): String {
+            return route
+        }
+
+        fun getClazz(): Class<out Generic> {
+            return clazz
+        }
     }
 }

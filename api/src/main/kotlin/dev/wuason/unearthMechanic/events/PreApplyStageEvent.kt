@@ -3,7 +3,6 @@ package dev.wuason.unearthMechanic.events
 import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
-import dev.wuason.unearthMechanic.system.IValidation
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -11,7 +10,7 @@ import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
-class ApplyStageEvent(private val player: Player, private val compatibility: ICompatibility, private val event: Event, private val loc: Location, private val toolUsed: ILiveTool, private val generic: IGeneric, private val iStage: IStage): Event(), Cancellable {
+class PreApplyStageEvent(private val player: Player, private val compatibility: ICompatibility, private val event: Event, private val loc: Location, private val toolUsed: ILiveTool, private val generic: IGeneric, private val iStage: IStage): Event(), Cancellable {
 
     //handler list
     companion object {

@@ -1,25 +1,17 @@
 package dev.wuason.unearthMechanic.system
 
-import dev.wuason.unearthMechanic.config.IGeneric
-import dev.wuason.unearthMechanic.config.IStage
-import dev.wuason.unearthMechanic.system.compatibilities.Compatibility
-import org.bukkit.Location
-import org.bukkit.entity.Player
+import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 
 interface IStageManager {
 
-    fun dropItems(loc: Location, stage: IStage)
+    fun getCompatibilities(): Array<ICompatibility>
 
-    fun isLastStage(generic: IGeneric, stage: IStage): Boolean
+    fun getCompatibilitiesLoaded(): MutableList<ICompatibility>
 
-    fun getCompatibilities(): Array<Compatibility>
+    fun getCompatibilityByAdapterId(adapterId: String): ICompatibility?
 
-    fun getCompatibilitiesLoaded(): MutableList<Compatibility>
+    fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean
 
-    fun getCompatibilityByAdapterId(adapterId: String): Compatibility?
-
-    fun isSimilarCompatibility(adapterId: String, compatibility: Compatibility): Boolean
-
-    fun addItems(player: Player, stage: IStage)
+    fun getAnimator(): IAnimator
 
 }

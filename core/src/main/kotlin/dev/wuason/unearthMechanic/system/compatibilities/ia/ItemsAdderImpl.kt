@@ -1,21 +1,22 @@
-package dev.wuason.unearthMechanic.system.compatibilities
+package dev.wuason.unearthMechanic.system.compatibilities.ia
 
 import dev.lone.itemsadder.api.CustomBlock
 import dev.lone.itemsadder.api.CustomFurniture
-import dev.lone.itemsadder.api.CustomStack
 import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
 import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
-import dev.wuason.mechanics.utils.VersionDetector
-import dev.wuason.mechanics.utils.VersionDetector.ServerVersion
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.*
+import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
+import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
+import dev.wuason.unearthMechanic.system.features.Features
+import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Bukkit
 import org.bukkit.Location
-import org.bukkit.Material
+import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
@@ -25,11 +26,13 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.Damageable
-import kotlin.math.min
 
-class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager: StageManager): Compatibility {
+class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager: StageManager): ICompatibility {
 
+
+    override fun onLoad() {
+        Features.registerFeature(UsagesFeature())
+    }
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -100,80 +103,41 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         return "ia"
     }
 
-    override fun handleOthersFeatures(
-        player: Player,
-        event: Event,
-        loc: Location,
-        toolUsed: ITool,
-        generic: IGeneric,
-        stage: IStage
-    ) {
-        val itemMainHand: ItemStack = player.inventory.itemInMainHand
-        if (stage.getUsagesIaToRemove() > 0 && !itemMainHand.type.isAir) {
-            CustomStack.byItemStack(itemMainHand)?.let { customStack ->
-                customStack.reduceUsages(stage.getUsagesIaToRemove())
-                itemMainHand.itemMeta = customStack.itemStack.itemMeta
-            }
-        }
-        if (stage.getDurabilityToRemove() > 0) {
-            val itemMainHand: ItemStack = player.inventory.itemInMainHand
-            if (!itemMainHand.type.isAir) {
-                itemMainHand.editMeta { meta ->
-                    if (meta is Damageable) {
-
-                        if (VersionDetector.getServerVersion().isLessThan(ServerVersion.v1_20_5)) {
-                            meta.damage += stage.getDurabilityToRemove()
-                            if (meta.damage >= itemMainHand.type.maxDurability) {
-                                player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-                            }
-                        }
-                        else {
-                            if (meta.hasMaxDamage()) {
-
-                                meta.damage += min(stage.getDurabilityToRemove(), meta.maxDamage - meta.damage)
-
-                                if (meta.damage >= meta.maxDamage) {
-                                    player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-                                }
-                            }
-                            else {
-
-                                meta.damage += stage.getDurabilityToRemove()
-
-                                if (meta.damage >= itemMainHand.type.maxDurability) {
-
-                                    player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-        }
-
-
-    }
-
-    override fun handleBlockStage(
+    override fun handleStage(
         player: Player,
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (generic is IBlock) {
+            handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
+        }
+        else if (generic is IFurniture) {
+            handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
+        }
+    }
+
+    private fun handleBlockStage(
+        player: Player,
+        itemId: String,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
         placeBlock(itemId.replace("ia:", ""), loc)
     }
 
-    override fun handleFurnitureStage(
+    private fun handleFurnitureStage(
         player: Player,
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -195,7 +159,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -207,6 +171,36 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
                 event.furniture?.remove(false)
             }
         }
+    }
+
+    override fun hashCode(
+        player: Player,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: Int
+    ): Int {
+        if (generic is IBlock) {
+            if (event is CustomBlockInteractEvent) {
+                val block: Block = event.blockClicked
+                return Utils.calculateHashCode(block.location.hashCode(), block.hashCode(), block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode())
+            }
+        }
+        else if (generic is IFurniture) {
+            if (event is FurnitureInteractEvent) {
+                val entity: Entity = event.bukkitEntity
+                return Utils.calculateHashCode(entity.location.hashCode(), entity.hashCode(), entity.type.hashCode(), entity.uniqueId.hashCode(), entity.isDead.hashCode(), entity.facing.hashCode())
+            }
+        }
+        return -1
+    }
+
+    override fun getItemHand(event: Event): ItemStack? {
+        if (event is CustomBlockInteractEvent) {
+            return event.item
+        }
+        return null
     }
 
 }
