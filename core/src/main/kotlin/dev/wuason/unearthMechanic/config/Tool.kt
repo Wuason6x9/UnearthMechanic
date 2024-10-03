@@ -2,16 +2,16 @@ package dev.wuason.unearthMechanic.config
 
 import java.util.*
 
-class Tool(private val itemId: String, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val anim: String?, private val delayAnim: Long, private val delay: Long, private val replaceOnBreak: String?): ITool {
+class Tool(private val itemId: String, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val animation: Animation?, private val delay: Long, private val replaceOnBreak: String?): ITool {
     companion object {
 
         fun Tool(itemId: String): Tool {
-            return Tool(itemId, 0, 0, 0, null, null, 0, 0, null)
+            return Tool(itemId, 0, 0, 0, null, null, 0, null)
         }
 
         fun parseTool(tool: String): Tool {
             val split: List<String> = tool.split(";")
-            if (split.size == 1) return Tool(split[0].trim(), 0, 0, 0, null, null, 0, 0, null)
+            if (split.size == 1) return Tool(split[0].trim(), 0, 0, 0, null, null, 0, null)
             var size: Int = 0
             var deep: Int = 0
             var depth: Int = 0
@@ -46,7 +46,8 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
                 if (size < 1) size = 1
                 if (depth < 1) depth = 1
             }
-            return Tool(split[0], size, deep, depth, sound, anim, delayAnim, delay, replaceOnBreak)
+            val animation: Animation? = if (anim != null) Animation(if (delayAnim > 0) delayAnim else -1, anim!!) else null
+            return Tool(split[0], size, deep, depth, sound, animation, delay, replaceOnBreak)
         }
     }
 
@@ -81,11 +82,8 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
         if (sound != null) {
             builder.append(";sound=${sound}")
         }
-        if (anim != null) {
-            builder.append(";anim=${anim}")
-        }
-        if (delayAnim > 0) {
-            builder.append(";delayanim=${delayAnim}")
+        if (animation != null) {
+            builder.append(";anim=${animation}")
         }
         if (delay > 0) {
             builder.append(";delay=${delay}")
@@ -110,12 +108,8 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
         return sound
     }
 
-    override fun getAnim(): String? {
-        return anim
-    }
-
-    override fun getDelayAnim(): Long {
-        return delayAnim
+    override fun getAnimation(): IAnimation? {
+        return animation
     }
 
     override fun getDelay(): Long {

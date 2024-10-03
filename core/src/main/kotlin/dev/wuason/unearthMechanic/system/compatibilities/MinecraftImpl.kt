@@ -10,6 +10,7 @@ import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
@@ -134,5 +135,11 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         return null
     }
 
+    override fun getBlockFace(event: Event): BlockFace? {
+        if (event is PlayerInteractEvent) {
+            return event.blockFace
+        }
+        return null
+    }
 
 }

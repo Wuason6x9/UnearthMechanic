@@ -1,16 +1,17 @@
 package dev.wuason.unearthMechanic.system
 
 import dev.wuason.unearthMechanic.config.ITool
+import dev.wuason.unearthMechanic.system.animations.IAnimationRunner
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 class LiveTool(private var itemMainHand: ItemStack, private val iTool: ITool, private val player: Player, private val stageManager: StageManager): ILiveTool {
 
-    override fun getItemMainHand(): ItemStack? {
+    override fun getItemMainHand(): ItemStack {
         return if (!stageManager.getAnimator().isAnimating(player)) {
-            itemMainHand
+            player.inventory.itemInMainHand
         } else {
-            stageManager.getAnimator().getAnimation(player)?.getItemMainHand()?: player.inventory.itemInMainHand
+            stageManager.getAnimator().getAnimation(player)!!.getItemMainHand()
         }
     }
 
@@ -26,8 +27,8 @@ class LiveTool(private var itemMainHand: ItemStack, private val iTool: ITool, pr
 
     override fun isValid(): Boolean {
         if (stageManager.getAnimator().isAnimating(player)) {
-            val data: IAnimationData = stageManager.getAnimator().getAnimation(player)!!
-            return data.getAnimation().getAnimationItem() == player.inventory.itemInMainHand
+            val data: IAnimationRunner = stageManager.getAnimator().getAnimation(player)!!
+            return data.isValid()
         }
         return player.inventory.itemInMainHand == itemMainHand
     }

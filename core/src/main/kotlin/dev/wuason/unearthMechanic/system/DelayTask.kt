@@ -32,7 +32,7 @@ class DelayTask(
             cancel()
             return
         }
-        stageManager.onProcessStage(tick, player, compatibility, event, loc, toolUsed, generic, stage, validation)
+        stageManager.onProcessStage(tick++, player, compatibility, event, loc, toolUsed, generic, stage, validation)
         if (tick >= stage.getMaxCorrectDelay(toolUsed)) {
             cancel()
         }

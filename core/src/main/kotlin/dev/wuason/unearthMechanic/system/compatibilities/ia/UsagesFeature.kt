@@ -1,6 +1,7 @@
 package dev.wuason.unearthMechanic.system.compatibilities.ia
 
 import dev.lone.itemsadder.api.CustomStack
+import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
@@ -27,6 +28,9 @@ class UsagesFeature: Feature() {
             CustomStack.byItemStack(itemMainHand)?.let { customStack ->
                 customStack.reduceUsages(iStage.getUsagesIaToRemove())
                 itemMainHand.itemMeta = customStack.itemStack.itemMeta
+                UnearthMechanic.getInstance().getStageManager().getAnimator().getAnimation(p)?.let { anim ->
+                    anim.updateItemMainHandData()
+                }
             }
         }
     }

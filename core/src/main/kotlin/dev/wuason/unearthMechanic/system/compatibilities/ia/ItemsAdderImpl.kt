@@ -17,6 +17,7 @@ import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.entity.Entity
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
@@ -164,7 +165,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         stage: IStage
     ) {
         if (generic is IBlock) {
-            breakBlock(loc, player)
+            loc.block.type = org.bukkit.Material.AIR
         }
         else if (generic is IFurniture) {
             if (event is FurnitureInteractEvent) {
@@ -199,6 +200,13 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
     override fun getItemHand(event: Event): ItemStack? {
         if (event is CustomBlockInteractEvent) {
             return event.item
+        }
+        return null
+    }
+
+    override fun getBlockFace(event: Event): BlockFace? {
+        if (event is CustomBlockInteractEvent) {
+            return event.blockFace
         }
         return null
     }

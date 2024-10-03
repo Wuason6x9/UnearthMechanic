@@ -22,7 +22,7 @@ unearth:
             #reduce_item_main_hand: 1
             #only_one_add: true
             #delay: 3
-            #tool_anim_on_delay: false
+            #tool_anim_on_delay: false #removed
             #delay_events:
             #  0:
             #    not_implemented: true

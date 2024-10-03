@@ -12,12 +12,6 @@ import org.bukkit.event.Event
 
 class ToolSoundFeature: Feature() {
 
-    companion object {
-        init {
-            Features.registerFeature(ToolSoundFeature())
-        }
-    }
-
     override fun onPreApply(
         p: Player,
         comp: ICompatibility,

@@ -94,6 +94,7 @@ class Stage(
         if(items.isEmpty()) return
         if (isOnlyOneItem()) {
             items[Random.nextInt(items.size)].addItem(player, true)
+            return
         }
         items.forEach { it.addItem(player, true) }
     }

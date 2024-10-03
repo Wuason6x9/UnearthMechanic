@@ -3,6 +3,7 @@ package dev.wuason.unearthMechanic.system.features
 import dev.wuason.mechanics.items.ItemBuilder
 import dev.wuason.mechanics.utils.VersionDetector
 import dev.wuason.mechanics.utils.VersionDetector.ServerVersion
+import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
@@ -16,12 +17,6 @@ import org.bukkit.inventory.meta.Damageable
 import kotlin.math.min
 
 class DurabilityFeature: Feature() {
-
-    companion object {
-        init {
-            Features.registerFeature(DurabilityFeature())
-        }
-    }
 
     override fun onApply(
         p: Player,
@@ -73,7 +68,9 @@ class DurabilityFeature: Feature() {
                     }
                 }
 
-                val meta: Damageable = itemMainHand.itemMeta as Damageable
+                UnearthMechanic.getInstance().getStageManager().getAnimator().getAnimation(p)?.let { anim ->
+                    anim.updateItemMainHandData()
+                }
             }
 
         }

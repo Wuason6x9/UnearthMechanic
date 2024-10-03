@@ -18,6 +18,7 @@ interface ICompatibility : Listener {
     fun handleRemove(player: Player, event: Event, loc: Location, toolUsed: ILiveTool, generic: IGeneric, stage: IStage)
     fun hashCode(player: Player, event: Event, loc: Location, toolUsed: ILiveTool, generic: IGeneric, stage: Int): Int
     fun getItemHand(event: Event) : ItemStack?
+    fun getBlockFace(event: Event) : org.bukkit.block.BlockFace?
     open fun onLoad() {}
 
 

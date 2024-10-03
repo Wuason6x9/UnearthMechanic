@@ -16,12 +16,17 @@ import org.bukkit.inventory.ItemStack
 
 class BasicFeatures: Feature() {
 
-    companion object {
-        init {
-            Features.registerFeature(BasicFeatures())
-        }
+    override fun onProcess(
+        tick: Long,
+        p: Player,
+        comp: ICompatibility,
+        event: Event,
+        loc: Location,
+        liveTool: ILiveTool,
+        iStage: IStage,
+        iGeneric: IGeneric
+    ) {
     }
-
 
     override fun onApply(
         p: Player,
@@ -39,6 +44,9 @@ class BasicFeatures: Feature() {
 
         if (iStage.getReduceItemHand() != 0) liveTool.getItemMainHand()?.let {
             if (!it.type.isAir) it.subtract(iStage.getReduceItemHand())
+            UnearthMechanic.getInstance().getStageManager().getAnimator().getAnimation(p)?.let { anim ->
+                anim.updateItemMainHandData()
+            }
         }
 
         if (iStage.getSounds().isNotEmpty()) {

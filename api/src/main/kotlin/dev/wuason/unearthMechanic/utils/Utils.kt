@@ -46,8 +46,6 @@ class Utils {
                 }
             }
             return blocks
-
-            calculateHashCode()
         }
 
         fun calculateHashCode(vararg objects: Any): Int {

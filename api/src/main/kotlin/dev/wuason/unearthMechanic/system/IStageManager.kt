@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.unearthMechanic.system.animations.IAnimationManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 
 interface IStageManager {
@@ -12,6 +13,6 @@ interface IStageManager {
 
     fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean
 
-    fun getAnimator(): IAnimator
+    fun getAnimator(): IAnimationManager
 
 }

@@ -29,7 +29,7 @@ open class Item(private val itemId: String, private val amount: String, private 
     }
 
     override fun addItem(player: Player, applyChance: Boolean) {
-        if (applyChance) StorageUtils.addItemToInventoryOrDrop(player, getItemStackChance())
+        if (applyChance) StorageUtils.addItemToInventoryOrDrop(player, getItemStackChance()?: return)
         else StorageUtils.addItemToInventoryOrDrop(player, getItemStack())
     }
 }

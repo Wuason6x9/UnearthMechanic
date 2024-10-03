@@ -18,7 +18,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
     private val genericsBaseItemId: HashMap<String, HashMap<String, IGeneric>> = HashMap()
 
     override fun loadConfig() {
-
+        generics.clear()
+        genericsBaseItemId.clear()
+        loadConfig(GenericType.BLOCK)
+        loadConfig(GenericType.FURNITURE)
     }
 
     private fun getAllFilesRecursive(file: File): List<File> {
@@ -34,7 +37,6 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
     }
 
     fun loadConfig(type: GenericType) {
-        generics.filter { type.getClazz().isInstance(it.value) }.forEach { generics.remove(it.key) }
         val base = File(core.dataFolder.path)
         base.mkdirs()
         val files: List<File> = getAllFilesRecursive(base).filter { it.name.endsWith(".yml") }

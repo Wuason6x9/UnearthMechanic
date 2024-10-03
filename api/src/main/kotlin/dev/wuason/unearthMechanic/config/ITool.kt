@@ -8,8 +8,7 @@ interface ITool {
     fun getDepth(): Int
     fun isMultiple(): Boolean
     fun getSound(): ISound?
-    fun getAnim(): String?
-    fun getDelayAnim(): Long
+    fun getAnimation(): IAnimation?
     fun getDelay(): Long
     fun getReplaceOnBreak(): String?
 }

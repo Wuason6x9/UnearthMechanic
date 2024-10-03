@@ -175,7 +175,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         stage: IStage
     ) {
         if (generic is IBlock) {
-            breakBlock(loc, player)
+            loc.block.type = org.bukkit.Material.AIR
         } else if (generic is IFurniture) {
             if (event is OraxenFurnitureInteractEvent) {
                 breakFurniture(event.baseEntity, player, event.mechanic.itemID)
@@ -250,6 +250,16 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         }
         if (event is OraxenFurnitureInteractEvent) {
             return event.itemInHand
+        }
+        return null
+    }
+
+    override fun getBlockFace(event: Event): BlockFace? {
+        if (event is OraxenNoteBlockInteractEvent) {
+            return event.blockFace
+        }
+        if (event is OraxenStringBlockInteractEvent) {
+            return event.blockFace
         }
         return null
     }
