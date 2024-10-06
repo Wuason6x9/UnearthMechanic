@@ -1,7 +1,9 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.libs.protectionlib.ProtectionLib
 import dev.wuason.mechanics.compatibilities.adapter.Adapter
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.events.ApplyStageEvent
 import dev.wuason.unearthMechanic.events.PreApplyStageEvent
@@ -63,7 +65,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
     fun interact(player: Player, baseItemId: String, location: Location, event: Event, compatibility: ICompatibility) {
-
         if (StageData.hasStageData(location)) {
             val stageData: StageData = StageData.fromLoc(location) ?: return
             val toolUsed: String = Adapter.getAdapterIdBasic(
@@ -93,6 +94,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         toolUsed: String
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
+        if (((!ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && !core.getWorldGuardComp().canInteract(player, location))) && !stageData.getGeneric().isNotProtect()) return //protection
+
         if (event is Cancellable) {
             event.isCancelled = true
         }
@@ -126,6 +129,9 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         if (!core.getConfigManager().validTool(baseItemId, toolUsed)) return
         val generic: IGeneric = core.getConfigManager().getGeneric(baseItemId, toolUsed) ?: return
+
+        if (((!ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && !core.getWorldGuardComp().canInteract(player, location))) && !generic.isNotProtect()) return //protection
+
         if (event is Cancellable) {
             event.isCancelled = true
         }

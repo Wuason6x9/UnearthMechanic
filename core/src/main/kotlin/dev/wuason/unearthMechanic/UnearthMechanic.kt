@@ -1,6 +1,8 @@
 package dev.wuason.unearthMechanic
 
 import dev.wuason.mechanics.utils.AdventureUtils
+import dev.wuason.unearthMechanic.compatibilities.WorldGuardComp
+import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.ConfigManager
 import dev.wuason.unearthMechanic.system.IStageManager
 import dev.wuason.unearthMechanic.system.StageManager
@@ -29,6 +31,11 @@ class UnearthMechanic : UnearthMechanicPlugin() {
     private lateinit var commandManager: CommandManager
     private lateinit var configManager: ConfigManager
     private lateinit var stageManager: StageManager
+    private lateinit var worldGuardComp: WorldGuardComp
+
+    override fun onMechanicLoad() {
+        if (WorldGuardPlugin.isWorldGuardLoaded()) worldGuardComp = WorldGuardComp(this)
+    }
 
     override fun onMechanicEnable() {
 
@@ -39,7 +46,7 @@ class UnearthMechanic : UnearthMechanicPlugin() {
         AdventureUtils.sendMessagePluginConsole(this, "");
         AdventureUtils.sendMessagePluginConsole(this, "<gold> Selected compatibility: <aqua>${checkCompatibility()}");
 
-        if (check()) return
+        //if (check()) return
 
         configManager = ConfigManager(this)
         configManager.loadConfig()
@@ -67,6 +74,10 @@ class UnearthMechanic : UnearthMechanicPlugin() {
 
     override fun getStageManager(): IStageManager {
         return stageManager
+    }
+
+    fun getWorldGuardComp(): WorldGuardComp {
+        return worldGuardComp
     }
 
     private fun checkCompatibility(): String? {

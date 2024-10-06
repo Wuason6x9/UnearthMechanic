@@ -1,5 +1,6 @@
 unearth:
   block:
+    no_protect: false #If true, the block will not be protected by the plugins compatibilities
     fish_destroyed1:
       base:
         - "ia:elitefantasy:fish_destroyed_sand_1;extension_1" #Item base

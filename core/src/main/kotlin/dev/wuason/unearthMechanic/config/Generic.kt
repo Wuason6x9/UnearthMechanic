@@ -4,7 +4,7 @@ import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 
-open class Generic(private val id: String, private val tools: Set<ITool>, private val baseItemId: String, private val stages: List<IStage> = mutableListOf()): IGeneric {
+open class Generic(private val id: String, private val tools: Set<ITool>, private val baseItemId: String, private val stages: List<IStage> = mutableListOf(), private val notProtected: Boolean): IGeneric {
 
     private val stagesItemsId: HashMap<String, IStage> = HashMap<String, IStage>()
 
@@ -44,5 +44,9 @@ open class Generic(private val id: String, private val tools: Set<ITool>, privat
 
     override fun isLastStage(stage: IStage): Boolean {
         return stage.getStage() == stages.size - 1
+    }
+
+    override fun isNotProtect(): Boolean {
+        return notProtected
     }
 }

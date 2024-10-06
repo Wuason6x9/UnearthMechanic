@@ -9,7 +9,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.8"
+    project.version = "0.1.9"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -29,6 +29,9 @@ allprojects {
         }
         maven("https://repo.oraxen.com/releases") {
             name = "oraxen"
+        }
+        maven("https://maven.enginehub.org/repo/") {
+            name = "enginehub"
         }
     }
 
@@ -78,6 +81,7 @@ subprojects {
         compileOnly("com.github.Wuason6x9:mechanics:1.0.1.12a")
         compileOnly("io.th0rgal:oraxen:1.178.0") // 1.174.0 supported version
         compileOnly("com.github.LoneDev6:API-ItemsAdder:3.6.3-beta-14")
+        compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT")
     }
 }
 

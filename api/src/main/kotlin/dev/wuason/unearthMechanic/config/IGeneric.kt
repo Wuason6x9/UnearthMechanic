@@ -17,4 +17,6 @@ interface IGeneric {
     fun existsTool(toolId: String): Boolean
 
     fun isLastStage(stage: IStage): Boolean
+
+    fun isNotProtect(): Boolean
 }

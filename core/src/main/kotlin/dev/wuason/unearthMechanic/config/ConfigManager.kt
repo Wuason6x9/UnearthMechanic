@@ -58,6 +58,8 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         basesItemId.addAll(baseItemId as List<String>)
                     }
 
+                    val notProtected: Boolean = sectionGeneric.getBoolean("no_protect", false)
+
                     val tools: Set<ITool> = sectionGeneric.getStringList("tool", listOf("mc:air")).map { Tool.parseTool(it) }.toSet()
 
                     val stages: MutableList<IStage> = mutableListOf()
@@ -128,7 +130,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                         val constructor: Constructor<*> = type.getClazz().declaredConstructors[0]
 
-                        val generic: IGeneric = constructor.newInstance(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages) as IGeneric
+                        val generic: IGeneric = constructor.newInstance(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages, notProtected) as IGeneric
 
                         generics[generic.getId()] = generic
 
