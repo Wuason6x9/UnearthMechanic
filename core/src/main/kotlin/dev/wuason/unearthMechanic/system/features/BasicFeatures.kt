@@ -53,7 +53,7 @@ class BasicFeatures: Feature() {
             iStage.getSounds().forEach { sound ->
                 if (sound.delay > 0) {
                     Bukkit.getScheduler().runTaskLater(UnearthMechanic.getInstance(), Runnable {
-                        p.playSound(
+                        loc.world.playSound(
                             Sound.sound(
                                 Key.key(sound.soundId),
                                 Sound.Source.BLOCK,
@@ -63,7 +63,7 @@ class BasicFeatures: Feature() {
                         )
                     }, sound.delay)
                 } else {
-                    p.playSound(Sound.sound(Key.key(sound.soundId), Sound.Source.BLOCK, sound.volume, sound.pitch))
+                    loc.world.playSound(Sound.sound(Key.key(sound.soundId), Sound.Source.BLOCK, sound.volume, sound.pitch))
                 }
             }
         }

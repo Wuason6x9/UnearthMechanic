@@ -22,7 +22,7 @@ class ToolSoundFeature: Feature() {
         iGeneric: IGeneric
     ) {
         liveTool.getITool().getSound()?.let { sound ->
-            p.playSound(
+            loc.world.playSound(
                 Sound.sound(
                     Key.key(sound.soundId),
                     Sound.Source.BLOCK,
