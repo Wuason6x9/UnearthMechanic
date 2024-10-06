@@ -1,12 +1,12 @@
 package dev.wuason.unearthMechanic.system.compatibilities
 
 import dev.wuason.mechanics.compatibilities.adapter.Adapter
-import dev.wuason.mechanics.utils.VersionDetector
-import dev.wuason.mechanics.utils.VersionDetector.ServerVersion
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.config.*
+import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
+import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -14,18 +14,14 @@ import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
-import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.Damageable
 import java.util.*
-import kotlin.math.absoluteValue
-import kotlin.math.min
 
-class MinecraftImpl(private val core: UnearthMechanic, private val stageManager: StageManager): Compatibility {
+class MinecraftImpl(private val core: UnearthMechanic, private val stageManager: StageManager): ICompatibility {
     override fun loaded(): Boolean {
         return true
     }
@@ -60,83 +56,52 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         }
     }
 
-
-    override fun handleOthersFeatures(
-        player: Player,
-        event: Event,
-        loc: Location,
-        toolUsed: ITool,
-        generic: IGeneric,
-        stage: IStage
-    ) {
-        if (stage.getDurabilityToRemove() > 0) {
-            val itemMainHand: ItemStack = player.inventory.itemInMainHand
-            if (!itemMainHand.type.isAir) {
-                itemMainHand.editMeta { meta ->
-                    if (meta is Damageable) {
-
-                        if (VersionDetector.getServerVersion().isLessThan(ServerVersion.v1_20_5)) {
-                            meta.damage += stage.getDurabilityToRemove()
-                            if (meta.damage >= itemMainHand.type.maxDurability) {
-                                player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-                            }
-                        }
-                        else {
-                            if (meta.hasMaxDamage()) {
-
-                                meta.damage += min(stage.getDurabilityToRemove(), meta.maxDamage - meta.damage)
-
-                                if (meta.damage >= meta.maxDamage) {
-                                    player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-                                }
-                            }
-                            else {
-
-                                meta.damage += stage.getDurabilityToRemove()
-
-                                if (meta.damage >= itemMainHand.type.maxDurability) {
-
-                                    player.inventory.setItemInMainHand(ItemStack(Material.AIR))
-
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    override fun handleBlockStage(
+    private fun handleBlockStage(
         player: Player,
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
         loc.block.type = Material.getMaterial(itemId.replace("mc:", "").uppercase(Locale.ENGLISH)) ?: return
     }
 
-    override fun handleFurnitureStage(
+    private fun handleFurnitureStage(
         player: Player,
         itemId: String,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
         throw UnsupportedOperationException("Minecraft does not support furniture stages")
     }
 
+    override fun handleStage(
+        player: Player,
+        itemId: String,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (generic is IBlock) {
+            handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
+        }
+        else if (generic is IFurniture) {
+            handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
+        }
+    }
+
     override fun handleRemove(
         player: Player,
         event: Event,
         loc: Location,
-        toolUsed: ITool,
+        toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
@@ -148,5 +113,33 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         }
     }
 
+    override fun hashCode(
+        player: Player,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: Int
+    ): Int {
+        if (generic is IBlock && event is PlayerInteractEvent) {
+            val block: Block = event.clickedBlock!!
+            return Utils.calculateHashCode(block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode(), block.hashCode())
+        }
+        return -1
+    }
+
+    override fun getItemHand(event: Event): ItemStack? {
+        if (event is PlayerInteractEvent) {
+            return event.item
+        }
+        return null
+    }
+
+    override fun getBlockFace(event: Event): BlockFace? {
+        if (event is PlayerInteractEvent) {
+            return event.blockFace
+        }
+        return null
+    }
 
 }

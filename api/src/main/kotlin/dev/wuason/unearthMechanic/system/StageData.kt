@@ -128,6 +128,22 @@ class StageData(private val location: Location, private val stage: Int, private 
             data.remove(NAMESPACED_KEY)
         }
 
+        fun compare(stageData: StageData, loc: Location): Boolean {
+            val block: Block = loc.block
+            return compare(stageData, block)
+        }
+
+        fun compare(stageData: StageData, block: Block): Boolean {
+            val data: PersistentDataContainer = CustomBlockData(block, UnearthMechanicPlugin.getInstance())
+            if (!data.has(NAMESPACED_KEY, DataType.BOOLEAN)) {
+                return true
+            }
+            val loc: Location = data.get(NAMESPACED_LOC_KEY, DataType.LOCATION) ?: return false
+            val id: String = data.get(NAMESPACED_ID_KEY, DataType.STRING) ?: return false
+            val stage: Int = data.get(NAMESPACED_CUR_STAGE_KEY, DataType.INTEGER) ?: return false
+            return stageData.location == loc && stageData.generic.getId() == id && stageData.stage == stage
+        }
+
         fun hasStageData(loc: Location): Boolean {
             val block: Block = loc.block
             return hasStageData(block)

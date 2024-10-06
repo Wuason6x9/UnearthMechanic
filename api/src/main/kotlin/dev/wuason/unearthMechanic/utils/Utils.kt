@@ -47,5 +47,16 @@ class Utils {
             }
             return blocks
         }
+
+        fun calculateHashCode(vararg objects: Any): Int {
+            if (objects.isEmpty()) return -1
+            if (objects.size == 1) return objects[0].hashCode()
+            var result = 1
+            for (element in objects) {
+                result = 31 * result + element.hashCode()
+            }
+            return result
+        }
+
     }
 }

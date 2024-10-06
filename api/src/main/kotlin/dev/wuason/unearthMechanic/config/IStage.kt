@@ -1,5 +1,8 @@
 package dev.wuason.unearthMechanic.config
 
+import org.bukkit.Location
+import org.bukkit.entity.Player
+
 interface IStage {
 
     fun getStage(): Int
@@ -23,5 +26,15 @@ interface IStage {
     fun getItems(): List<IItem>
 
     fun isOnlyOneItem(): Boolean
+
+    fun getSounds(): List<ISound>
+
+    fun getDelay(): Long
+
+    fun isToolAnimDelay(): Boolean
+
+    fun dropItems(loc: Location)
+
+    fun addItems(player: Player)
 
 }

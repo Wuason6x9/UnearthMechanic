@@ -2,6 +2,8 @@ package dev.wuason.unearthMechanic.config
 
 import dev.wuason.mechanics.items.ItemBuilder
 import dev.wuason.mechanics.utils.MathUtils
+import dev.wuason.mechanics.utils.StorageUtils
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 open class Item(private val itemId: String, private val amount: String, private val chance: Int) : IItem {
@@ -24,5 +26,10 @@ open class Item(private val itemId: String, private val amount: String, private 
 
     override fun getItemId(): String {
         return itemId
+    }
+
+    override fun addItem(player: Player, applyChance: Boolean) {
+        if (applyChance) StorageUtils.addItemToInventoryOrDrop(player, getItemStackChance()?: return)
+        else StorageUtils.addItemToInventoryOrDrop(player, getItemStack())
     }
 }

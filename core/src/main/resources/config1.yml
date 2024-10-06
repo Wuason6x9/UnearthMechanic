@@ -1,5 +1,6 @@
 unearth:
   block:
+    no_protect: false #If true, the block will not be protected by the plugins compatibilities
     fish_destroyed1:
       base:
         - "ia:elitefantasy:fish_destroyed_sand_1;extension_1" #Item base
@@ -11,6 +12,7 @@ unearth:
 
       tool:
         - ia:elitefantasy:big_brush;depth=1;deep=1;size=1
+        #- ia:elitefantasy:big_brush;depth=1;deep=1;size=1;anim=mc:stone;sound=mc:block.sand.break;delayAnim=3;delay=3;replaceOnBreak=mc:stone
       transformation:
         stages:
           1:
@@ -20,6 +22,16 @@ unearth:
             #reduce_usages_ia: 1
             #reduce_item_main_hand: 1
             #only_one_add: true
+            #delay: 3
+            #tool_anim_on_delay: false #removed
+            #delay_events:
+            #  0:
+            #    not_implemented: true
+            #sounds:
+            #  - sound: "minecraft:block.sand.break"
+            #    volume: 1.0
+            #    pitch: 1.0
+            #    delay: 0
             #items_add:
             #  - "ia:elitefantasy:fish_destroyed_1;1-64;55"
     fish_destroyed:
