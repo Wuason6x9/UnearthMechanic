@@ -1,4 +1,4 @@
-rootProject.name = "UnearthMechanic-Rewrite"
+rootProject.name = "UnearthMechanic"
 
 include(
     ":core",

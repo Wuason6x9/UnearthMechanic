@@ -10,23 +10,52 @@ import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
+/**
+ * Represents an event that occurs before a stage is applied.
+ *
+ * @property player The player associated with the event.
+ * @property compatibility The compatibility handler for the event.
+ * @property event The triggering event.
+ * @property loc The location where the event occurs.
+ * @property toolUsed The tool used by the player during the event.
+ * @property generic The generic object containing event details.
+ * @property iStage The stage related to the event.
+ */
 class PreApplyStageEvent(private val player: Player, private val compatibility: ICompatibility, private val event: Event, private val loc: Location, private val toolUsed: ILiveTool, private val generic: IGeneric, private val iStage: IStage): Event(), Cancellable {
 
-    //handler list
+    /**
+     * Companion object for handling static members and functions related to event handling.
+     */
+//handler list
     companion object {
+        /**
+         * A singleton object to manage and retrieve all registered handlers for the PreApplyStageEvent.
+         */
         private val HANDLERS = HandlerList()
 
+        /**
+         * Retrieves the list of handlers associated with this event.
+         *
+         * @return The list of handlers.
+         */
         @JvmStatic
         fun getHandlerList(): HandlerList {
             return HANDLERS
         }
     }
 
+    /**
+     * Indicates whether the event has been cancelled.
+     *
+     * This property is used to check if the current event should be aborted,
+     * preventing any further processing or actions associated with it.
+     */
     private var isCancelled: Boolean = false
 
     /**
-     * Check if the event is cancelled
-     * @return if the event is cancelled
+     * Checks if the event has been cancelled.
+     *
+     * @return `true` if the event is cancelled, `false` otherwise.
      */
 
     override fun isCancelled(): Boolean {
@@ -34,21 +63,29 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Set the event as cancelled or not
-     * @param cancel the state of the event
+     * Sets the cancellation state of the event.
+     *
+     * @param cancel A boolean value indicating whether the event should be cancelled.
+     *               If true, the event is cancelled; otherwise, it is not.
      */
 
     override fun setCancelled(cancel: Boolean) {
         isCancelled = cancel
     }
 
+    /**
+     * Retrieves the list of handlers associated with this event.
+     *
+     * @return The list of handlers for this event.
+     */
     override fun getHandlers(): HandlerList {
         return HANDLERS
     }
 
     /**
-     * Get the player that triggered the event
-     * @return the player that triggered the event
+     * Retrieves the player associated with this event.
+     *
+     * @return The player involved in the event.
      */
 
     fun getPlayer(): Player {
@@ -56,8 +93,9 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Get the compatibility of the event (ItemsAdder, Oraxen, etc.)
-     * @return the compatibility of the event
+     * Retrieves the compatibility instance associated with this event.
+     *
+     * @return The ICompatibility instance linked with this event.
      */
 
     fun getCompatibility(): ICompatibility {
@@ -65,21 +103,28 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Get the event executor (OraxenNoteBlockInteract, OraxenStringBlockInteract, CustomBlockInteract....)
-     * @return the event executor
+     * Retrieves the event executor associated with this event.
+     *
+     * @return The Event executor instance.
      */
 
     fun getEventExecutor(): Event {
         return event
     }
 
+    /**
+     * Retrieves the location associated with the event.
+     *
+     * @return The Location where the event occurred.
+     */
     fun getLocation(): Location {
         return loc
     }
 
     /**
-     * Get the tool used in the event
-     * @return the tool used in the event
+     * Retrieves the tool that was used in the event.
+     *
+     * @return The instance of ILiveTool representing the tool used.
      */
 
     fun getToolUsed(): ILiveTool {
@@ -87,8 +132,9 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Get the generic data of the event
-     * @return the generic data of the event
+     * Retrieves an instance of IGeneric associated with this event.
+     *
+     * @return The IGeneric instance containing configuration and tools.
      */
 
     fun getGeneric(): IGeneric {
@@ -96,8 +142,9 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Get the current stage of the event
-     * @return the current stage of the event
+     * Retrieves the current stage of the event.
+     *
+     * @return The current IStage instance associated with this event.
      */
 
     fun getIStage(): IStage {
@@ -105,8 +152,9 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Check if the current stage is the last stage
-     * @return if the current stage is the last stage
+     * Determines if the current stage is the last stage in the sequence.
+     *
+     * @return `true` if the current stage is the last stage, `false` otherwise.
      */
 
     fun isLastStage(): Boolean {
@@ -114,8 +162,9 @@ class PreApplyStageEvent(private val player: Player, private val compatibility: 
     }
 
     /**
-     * Check if the current stage is the first stage
-     * @return if the current stage is the first stage
+     * Checks whether the current stage is the first stage.
+     *
+     * @return true if the current stage is the first stage (stage 0), false otherwise.
      */
 
     fun isFirstStage(): Boolean {
