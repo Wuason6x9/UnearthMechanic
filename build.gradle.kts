@@ -1,7 +1,11 @@
+import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.DokkaConfiguration.Visibility
+
 plugins {
     kotlin("jvm") version "2.0.20-RC2"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("org.gradle.maven-publish")
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 val targetJavaVersion = 21
@@ -9,7 +13,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.9"
+    project.version = "0.1.9b"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -42,10 +46,25 @@ allprojects {
 }
 
 project(":api") {
+
+    apply(plugin = "org.jetbrains.dokka")
+
     tasks.jar {
         archiveFileName.set("UnearthMechanic-api-${project.version}.jar")
         archiveClassifier.set("")
         destinationDirectory.set(file("../target"))
+    }
+
+    tasks.jar {
+        dependsOn("dokkaJavadocJar")
+    }
+
+    tasks.register<Jar>("dokkaJavadocJar") {
+        dependsOn(tasks.dokkaJavadoc)
+        from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
+        destinationDirectory.set(file("../target"))
+        archiveFileName = "javadoc.jar"
+        archiveClassifier.set("javadoc")
     }
 
     publishing {
@@ -55,6 +74,31 @@ project(":api") {
                 artifactId = rootProject.name
                 version = rootProject.version.toString()
                 artifact(tasks.jar)
+                artifact(tasks.getByName("dokkaJavadocJar"))
+            }
+        }
+    }
+
+    tasks.withType<DokkaTask>() {
+        moduleName.set(rootProject.name)
+        moduleVersion.set(project.version.toString())
+        outputDirectory.set(layout.buildDirectory.dir("dokka/$name"))
+        failOnWarning.set(false)
+        suppressObviousFunctions.set(true)
+        suppressInheritedMembers.set(false)
+        offlineMode.set(false)
+        dokkaSourceSets {
+            configureEach {
+                documentedVisibilities.set(
+                    setOf(
+                        Visibility.PUBLIC
+                    )
+                )
+                suppress.set(false)
+                skipDeprecated.set(false)
+                reportUndocumented.set(true)
+                skipEmptyPackages.set(true)
+                jdkVersion.set(targetJavaVersion)
             }
         }
     }
@@ -82,11 +126,12 @@ subprojects {
         compileOnly("io.th0rgal:oraxen:1.178.0") // 1.174.0 supported version
         compileOnly("com.github.LoneDev6:API-ItemsAdder:3.6.3-beta-14")
         compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT")
+        compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    //implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation(project(":api"))
     implementation(project(":core"))
 }

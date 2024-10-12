@@ -94,28 +94,29 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         toolUsed: String
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
-        if (((!ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && !core.getWorldGuardComp().canInteract(player, location))) && !stageData.getGeneric().isNotProtect()) return //protection
 
-        if (event is Cancellable) {
-            event.isCancelled = true
-        }
-        val iTool: ITool = stageData.getGeneric().getTool(toolUsed) ?: throw NullPointerException(
-            "Tool not found for $toolUsed in ${
-                stageData.getGeneric().getId()
-            } mabye is duplicated config"
-        )
+        if (((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (core.getWorldGuardComp().canInteractCustom(player, location) || (ProtectionLib.canInteract(player, location) && !core.getWorldGuardComp().canInteract(player, location)))) ) && !stageData.getGeneric().isNotProtect()) {
+            if (event is Cancellable) {
+                event.isCancelled = true
+            }
+            val iTool: ITool = stageData.getGeneric().getTool(toolUsed) ?: throw NullPointerException(
+                "Tool not found for $toolUsed in ${
+                    stageData.getGeneric().getId()
+                } mabye is duplicated config"
+            )
 
-        val liveTool: LiveTool = LiveTool(if (animator.isAnimating(player)) animator.getAnimation(player)!!.getItemMainHand() else player.inventory.itemInMainHand, iTool, player, this)
+            val liveTool: LiveTool = LiveTool(if (animator.isAnimating(player)) animator.getAnimation(player)!!.getItemMainHand() else player.inventory.itemInMainHand, iTool, player, this)
 
-        if (stageData.getGeneric().getStages().size <= stageData.getStage()) {
-            StageData.removeStageData(location)
-            interact(player, itemId, location, event, compatibility)
-            return
-        }
+            if (stageData.getGeneric().getStages().size <= stageData.getStage()) {
+                StageData.removeStageData(location)
+                interact(player, itemId, location, event, compatibility)
+                return
+            }
 
-        stageData.getGeneric().getStages()[stageData.getStage()]?.let {
-            val stage: Stage = it as Stage
-            onPreApplyStage(player, compatibility, event, location, liveTool, stageData.getGeneric(), stage)
+            stageData.getGeneric().getStages()[stageData.getStage()]?.let {
+                val stage: Stage = it as Stage
+                onPreApplyStage(player, compatibility, event, location, liveTool, stageData.getGeneric(), stage)
+            }
         }
     }
 
@@ -130,19 +131,21 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         if (!core.getConfigManager().validTool(baseItemId, toolUsed)) return
         val generic: IGeneric = core.getConfigManager().getGeneric(baseItemId, toolUsed) ?: return
 
-        if (((!ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && !core.getWorldGuardComp().canInteract(player, location))) && !generic.isNotProtect()) return //protection
+        if (((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (core.getWorldGuardComp().canInteractCustom(player, location) || (ProtectionLib.canInteract(player, location) && !core.getWorldGuardComp().canInteract(player, location)))) ) && !generic.isNotProtect()) {
 
-        if (event is Cancellable) {
-            event.isCancelled = true
-        }
-        val iTool: ITool = generic.getTool(toolUsed)
-            ?: throw NullPointerException("Tool not found for $toolUsed in ${generic.getId()} mabye is duplicated config")
-        val liveTool: LiveTool = LiveTool(if (animator.isAnimating(player)) animator.getAnimation(player)!!.getItemMainHand() else player.inventory.itemInMainHand, iTool, player, this)
+            if (event is Cancellable) {
+                event.isCancelled = true
+            }
 
+            val iTool: ITool = generic.getTool(toolUsed)
+                ?: throw NullPointerException("Tool not found for $toolUsed in ${generic.getId()} mabye is duplicated config")
 
-        generic.getStages()[0]?.let {
-            val stage: Stage = it as Stage
-            onPreApplyStage(player, compatibility, event, location, liveTool, generic, stage)
+            val liveTool: LiveTool = LiveTool(if (animator.isAnimating(player)) animator.getAnimation(player)!!.getItemMainHand() else player.inventory.itemInMainHand, iTool, player, this)
+
+            generic.getStages()[0]?.let {
+                val stage: Stage = it as Stage
+                onPreApplyStage(player, compatibility, event, location, liveTool, generic, stage)
+            }
         }
     }
 
