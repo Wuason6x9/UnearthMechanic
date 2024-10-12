@@ -1,6 +1,8 @@
 # Unearth Mechanic
 
-# -> [Javadoc link here] (https://jitpack.io/com/github/Wuason6x9/UnearthMechanic/0.1.9b/javadoc)
+# -> JavaDoc below <-
+
+[Javadoc link here] (https://jitpack.io/com/github/Wuason6x9/UnearthMechanic/0.1.9b/javadoc)
 
 ## Use api
 
