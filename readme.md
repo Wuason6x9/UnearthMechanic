@@ -1,5 +1,9 @@
 # Unearth Mechanic
 
+# -> JavaDoc below <-
+
+[here](https://jitpack.io/com/github/Wuason6x9/UnearthMechanic/0.1.9b/javadoc "Go to javadoc")
+
 ## Use api
 
 ### MAVEN (**.pom**)
