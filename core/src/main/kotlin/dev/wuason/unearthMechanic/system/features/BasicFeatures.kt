@@ -8,8 +8,10 @@ import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import org.bukkit.Bukkit
+import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.SoundCategory
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.inventory.ItemStack
@@ -40,12 +42,14 @@ class BasicFeatures: Feature() {
         if (iStage.getDrops().isNotEmpty()) iStage.dropItems(loc)
         if (iStage.getItems().isNotEmpty()) iStage.addItems(p)
 
-        if (iStage.isRemoveItemMainHand()) liveTool.setItemMainHand(ItemStack(Material.AIR))
+        if (iStage.isRemoveItemMainHand() && p.gameMode != GameMode.CREATIVE) liveTool.setItemMainHand(ItemStack(Material.AIR))
 
         if (iStage.getReduceItemHand() != 0) liveTool.getItemMainHand()?.let {
-            if (!it.type.isAir) it.subtract(iStage.getReduceItemHand())
-            UnearthMechanic.getInstance().getStageManager().getAnimator().getAnimation(p)?.let { anim ->
-                anim.updateItemMainHandData()
+            if (p.gameMode != GameMode.CREATIVE) {
+                if (!it.type.isAir) it.subtract(iStage.getReduceItemHand())
+                UnearthMechanic.getInstance().getStageManager().getAnimator().getAnimation(p)?.let { anim ->
+                    anim.updateItemMainHandData()
+                }
             }
         }
 
@@ -53,17 +57,22 @@ class BasicFeatures: Feature() {
             iStage.getSounds().forEach { sound ->
                 if (sound.delay > 0) {
                     Bukkit.getScheduler().runTaskLater(UnearthMechanic.getInstance(), Runnable {
-                        loc.world.playSound(
-                            Sound.sound(
-                                Key.key(sound.soundId),
-                                Sound.Source.BLOCK,
-                                sound.volume,
-                                sound.pitch
-                            )
+                        p.playSound(
+                            loc,
+                            sound.soundId,
+                            SoundCategory.BLOCKS,
+                            sound.volume,
+                            sound.pitch
                         )
                     }, sound.delay)
                 } else {
-                    loc.world.playSound(Sound.sound(Key.key(sound.soundId), Sound.Source.BLOCK, sound.volume, sound.pitch))
+                    p.playSound(
+                        loc,
+                        sound.soundId,
+                        SoundCategory.BLOCKS,
+                        sound.volume,
+                        sound.pitch
+                    )
                 }
             }
         }

@@ -95,7 +95,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
 
-        if (((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (core.getWorldGuardComp().canInteractCustom(player, location) || (ProtectionLib.canInteract(player, location) && !core.getWorldGuardComp().canInteract(player, location)))) ) && !stageData.getGeneric().isNotProtect()) {
+        if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
+
             if (event is Cancellable) {
                 event.isCancelled = true
             }
@@ -131,7 +132,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         if (!core.getConfigManager().validTool(baseItemId, toolUsed)) return
         val generic: IGeneric = core.getConfigManager().getGeneric(baseItemId, toolUsed) ?: return
 
-        if (((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (core.getWorldGuardComp().canInteractCustom(player, location) || (ProtectionLib.canInteract(player, location) && !core.getWorldGuardComp().canInteract(player, location)))) ) && !generic.isNotProtect()) {
+        if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !generic.isNotProtect()) {
 
             if (event is Cancellable) {
                 event.isCancelled = true
@@ -246,7 +247,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
 
         stage.getItemId()?.let {
-
             if (isSimilarCompatibility(it, compatibility)) {
                 compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
             } else {

@@ -1,5 +1,8 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.DokkaConfiguration.Visibility
+import java.net.URL
+import org.jetbrains.dokka.Platform
+
 
 plugins {
     kotlin("jvm") version "2.0.20-RC2"
@@ -13,7 +16,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.9b"
+    project.version = "0.1.9d"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -89,6 +92,7 @@ project(":api") {
         offlineMode.set(false)
         dokkaSourceSets {
             configureEach {
+                suppress.set(false)
                 documentedVisibilities.set(
                     setOf(
                         Visibility.PUBLIC
@@ -98,7 +102,27 @@ project(":api") {
                 skipDeprecated.set(false)
                 reportUndocumented.set(true)
                 skipEmptyPackages.set(true)
-                jdkVersion.set(targetJavaVersion)
+                jdkVersion.set(8)
+                noStdlibLink.set(false)
+                noJdkLink.set(false)
+                languageVersion.set("1.7")
+                platform.set(Platform.DEFAULT)
+                apiVersion.set("1.7")
+                displayName.set(name)
+                sourceRoots.from(file("src/main/kotlin"))
+                suppressGeneratedFiles.set(true)
+
+                sourceLink {
+                    localDirectory.set(file("src/main/kotlin"))
+                    remoteUrl.set(URL("https://github.com/Wuason6x9/UnearthMechanic/tree/master/api/src/main/kotlin/"
+                    ))
+                    remoteLineSuffix.set("#L")
+                }
+
+                externalDocumentationLink {
+                    url.set(URL("https://hub.spigotmc.org/javadocs/bukkit"))
+                }
+
             }
         }
     }
@@ -141,9 +165,18 @@ tasks.shadowJar {
     archiveClassifier.set("")
     destinationDirectory.set(file("target"))
 }
+tasks {
 
-tasks.build {
-    dependsOn("shadowJar")
+    compileJava {
+
+        options.encoding = "UTF-8"
+
+        dependsOn(clean)
+    }
+
+    build {
+        dependsOn("shadowJar")
+    }
 }
 
 

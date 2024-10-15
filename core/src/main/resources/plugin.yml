@@ -10,3 +10,7 @@ softdepend:
   - ItemsAdder
   - Oraxen
   - WorldGuard
+permissions:
+  unearthMechanic.bypass:
+    description: Allows the player to bypass the UnearthMechanic
+    default: op

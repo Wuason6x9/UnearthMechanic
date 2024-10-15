@@ -7,6 +7,7 @@ import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import org.bukkit.Location
+import org.bukkit.SoundCategory
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 
@@ -22,13 +23,12 @@ class ToolSoundFeature: Feature() {
         iGeneric: IGeneric
     ) {
         liveTool.getITool().getSound()?.let { sound ->
-            loc.world.playSound(
-                Sound.sound(
-                    Key.key(sound.soundId),
-                    Sound.Source.BLOCK,
-                    sound.volume,
-                    sound.pitch
-                )
+            p.playSound(
+                loc,
+                sound.soundId,
+                SoundCategory.BLOCKS,
+                sound.volume,
+                sound.pitch
             )
         }
     }
