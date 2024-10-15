@@ -102,7 +102,7 @@ project(":api") {
                 skipDeprecated.set(false)
                 reportUndocumented.set(true)
                 skipEmptyPackages.set(true)
-                jdkVersion.set(8)
+                jdkVersion.set(17)
                 noStdlibLink.set(false)
                 noJdkLink.set(false)
                 languageVersion.set("1.7")
@@ -155,7 +155,6 @@ subprojects {
 }
 
 dependencies {
-    //implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation(project(":api"))
     implementation(project(":core"))
 }
@@ -165,12 +164,11 @@ tasks.shadowJar {
     archiveClassifier.set("")
     destinationDirectory.set(file("target"))
 }
+
 tasks {
 
     compileJava {
-
         options.encoding = "UTF-8"
-
         dependsOn(clean)
     }
 
