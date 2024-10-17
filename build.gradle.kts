@@ -163,6 +163,7 @@ tasks.shadowJar {
     archiveFileName.set("UnearthMechanic-${project.version}.jar")
     archiveClassifier.set("")
     destinationDirectory.set(file("target"))
+    exclude("**/kotlin/**")
 }
 
 tasks {
