@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 import kotlin.math.min
 
-class DurabilityFeature: Feature() {
+class DurabilityFeature: AbstractFeature() {
 
     override fun onApply(
         p: Player,

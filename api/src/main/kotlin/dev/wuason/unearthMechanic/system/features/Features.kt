@@ -18,14 +18,14 @@ class Features {
          *
          * The contents of this list can be retrieved via the `getFeatures` method.
          */
-        private val features: MutableList<Feature> = mutableListOf()
+        private val features: MutableList<AbstractFeature> = mutableListOf()
 
         /**
          * Registers a feature to be available within the system.
          *
          * @param feature The feature to be registered.
          */
-        fun registerFeature(feature: Feature) {
+        fun registerFeature(feature: AbstractFeature) {
             features.add(feature)
         }
 
@@ -34,7 +34,7 @@ class Features {
          *
          * @param feature The feature to be unregistered.
          */
-        fun unregisterFeature(feature: Feature) {
+        fun unregisterFeature(feature: AbstractFeature) {
             features.remove(feature)
         }
 
@@ -43,7 +43,7 @@ class Features {
          *
          * @return A list of registered features.
          */
-        fun getFeatures(): List<Feature> {
+        fun getFeatures(): List<AbstractFeature> {
             return features
         }
 

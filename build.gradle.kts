@@ -5,6 +5,7 @@ import org.jetbrains.dokka.Platform
 
 
 plugins {
+    java
     kotlin("jvm") version "2.0.20-RC2"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("org.gradle.maven-publish")
@@ -16,7 +17,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.9d"
+    project.version = "0.1.9e"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -44,6 +45,19 @@ allprojects {
 
     kotlin {
         jvmToolchain(targetJavaVersion)
+    }
+
+    dependencies {
+        compileOnly("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
+    }
+
+    tasks {
+
+        compileJava {
+            options.encoding = "UTF-8"
+            dependsOn(clean)
+        }
+
     }
 
 }
@@ -87,7 +101,7 @@ project(":api") {
         moduleVersion.set(project.version.toString())
         outputDirectory.set(layout.buildDirectory.dir("dokka/$name"))
         failOnWarning.set(false)
-        suppressObviousFunctions.set(true)
+        suppressObviousFunctions.set(false)
         suppressInheritedMembers.set(false)
         offlineMode.set(false)
         dokkaSourceSets {
@@ -98,7 +112,6 @@ project(":api") {
                         Visibility.PUBLIC
                     )
                 )
-                suppress.set(false)
                 skipDeprecated.set(false)
                 reportUndocumented.set(true)
                 skipEmptyPackages.set(true)
@@ -106,7 +119,6 @@ project(":api") {
                 noStdlibLink.set(false)
                 noJdkLink.set(false)
                 languageVersion.set("1.7")
-                platform.set(Platform.DEFAULT)
                 apiVersion.set("1.7")
                 displayName.set(name)
                 sourceRoots.from(file("src/main/kotlin"))
@@ -117,10 +129,6 @@ project(":api") {
                     remoteUrl.set(URL("https://github.com/Wuason6x9/UnearthMechanic/tree/master/api/src/main/kotlin/"
                     ))
                     remoteLineSuffix.set("#L")
-                }
-
-                externalDocumentationLink {
-                    url.set(URL("https://hub.spigotmc.org/javadocs/bukkit"))
                 }
 
             }
@@ -150,7 +158,6 @@ subprojects {
         compileOnly("io.th0rgal:oraxen:1.178.0") // 1.174.0 supported version
         compileOnly("com.github.LoneDev6:API-ItemsAdder:3.6.3-beta-14")
         compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT")
-        compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     }
 }
 
@@ -163,15 +170,9 @@ tasks.shadowJar {
     archiveFileName.set("UnearthMechanic-${project.version}.jar")
     archiveClassifier.set("")
     destinationDirectory.set(file("target"))
-    exclude("**/kotlin/**")
 }
 
 tasks {
-
-    compileJava {
-        options.encoding = "UTF-8"
-        dependsOn(clean)
-    }
 
     build {
         dependsOn("shadowJar")

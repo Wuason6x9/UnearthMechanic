@@ -12,7 +12,7 @@ import org.bukkit.event.Event
  * Abstract class representing a general feature with lifecycle methods
  * that can be overridden to implement custom behavior.
  */
-abstract class Feature {
+abstract class AbstractFeature {
 
     /**
      * Invoked before applying a specific feature to a player. This method can be

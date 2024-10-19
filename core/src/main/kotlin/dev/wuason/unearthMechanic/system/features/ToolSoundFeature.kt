@@ -4,14 +4,12 @@ import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import net.kyori.adventure.key.Key
-import net.kyori.adventure.sound.Sound
 import org.bukkit.Location
 import org.bukkit.SoundCategory
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 
-class ToolSoundFeature: Feature() {
+class ToolSoundFeature: AbstractFeature() {
 
     override fun onPreApply(
         p: Player,

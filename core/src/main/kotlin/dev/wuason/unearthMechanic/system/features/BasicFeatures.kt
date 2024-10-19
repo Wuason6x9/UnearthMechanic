@@ -5,8 +5,6 @@ import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import net.kyori.adventure.key.Key
-import net.kyori.adventure.sound.Sound
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -16,7 +14,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.inventory.ItemStack
 
-class BasicFeatures: Feature() {
+class BasicFeatures: AbstractFeature() {
 
     override fun onProcess(
         tick: Long,
