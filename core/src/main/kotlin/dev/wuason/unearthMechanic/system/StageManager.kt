@@ -95,6 +95,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
 
+        if (stageData.getActualItemId().substring(0, stageData.getActualItemId().indexOf(":")) != compatibility.adapterId()) return
+
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
 
             if (event is Cancellable) {
@@ -159,8 +161,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         generic: IGeneric,
         stage: Stage
     ) {
-
-
         //send event
         val eventStage: PreApplyStageEvent =
             PreApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
@@ -181,7 +181,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 e.printStackTrace()
             }
         }
-
 
         if (stage.getMaxCorrectDelay(toolUsed) > 0) {
             if (loc in delays) return
@@ -230,9 +229,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage: Stage,
         validation: Validation? = null
     ) {
+
         if ((validation != null && !validation.validate()) || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
-
-
 
         val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
         Bukkit.getPluginManager().callEvent(applyStageEvent)
@@ -247,6 +245,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
 
         stage.getItemId()?.let {
+
             if (isSimilarCompatibility(it, compatibility)) {
                 compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
             } else {

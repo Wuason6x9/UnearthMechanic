@@ -37,6 +37,7 @@ class CommandManager(private val core: UnearthMechanic) : ICommandManager {
                         CommandAPICommand("info")
                             .executes(CommandExecutor { commandSender: CommandSender?, commandArguments: CommandArguments? ->
                                 AdventureUtils.sendMessage(commandSender, "<yellow>Debug Info:")
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Engine: <aqua> ${core.checkCompatibility()?: "<red>None"}")
                                 AdventureUtils.sendMessage(commandSender, "<yellow>Configs: <aqua>" + core.getConfigManager().getGenerics().size)
                                 AdventureUtils.sendMessage(commandSender, "<yellow>Configs block: <aqua>" + core.getConfigManager().getGenerics().count { it.value is Block })
                                 AdventureUtils.sendMessage(commandSender, "<yellow>Configs furniture: <aqua>" + core.getConfigManager().getGenerics().count { it.value is Furniture })
