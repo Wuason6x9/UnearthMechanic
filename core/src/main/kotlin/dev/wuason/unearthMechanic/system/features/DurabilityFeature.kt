@@ -8,6 +8,7 @@ import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
+import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -16,7 +17,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 import kotlin.math.min
 
-class DurabilityFeature: Feature() {
+class DurabilityFeature: AbstractFeature() {
 
     override fun onApply(
         p: Player,
@@ -27,7 +28,7 @@ class DurabilityFeature: Feature() {
         stage: IStage,
         iGeneric: IGeneric
     ) {
-        if (stage.getDurabilityToRemove() > 0) {
+        if (stage.getDurabilityToRemove() > 0 && p.gameMode != GameMode.CREATIVE) {
             val itemMainHand: ItemStack = toolUsed.getItemMainHand()?: return
             if (!itemMainHand.type.isAir) {
                 itemMainHand.editMeta { meta ->

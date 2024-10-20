@@ -297,7 +297,7 @@ class StageData(private val location: Location, private val stage: Int, private 
             val loc: Location = data.get(NAMESPACED_LOC_KEY, DataType.LOCATION) ?: return false
             val id: String = data.get(NAMESPACED_ID_KEY, DataType.STRING) ?: return false
             val stage: Int = data.get(NAMESPACED_CUR_STAGE_KEY, DataType.INTEGER) ?: return false
-            return stageData.location == loc && stageData.generic.getId() == id && stageData.stage == stage
+            return Utils.isExactBlockLocation(loc, stageData.getLocation()) && stageData.generic.getId() == id && stageData.stage == stage
         }
 
         /**

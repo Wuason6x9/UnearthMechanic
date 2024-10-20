@@ -6,13 +6,14 @@ import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import dev.wuason.unearthMechanic.system.features.Feature
+import dev.wuason.unearthMechanic.system.features.AbstractFeature
+import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.inventory.ItemStack
 
-class UsagesFeature: Feature() {
+class UsagesFeature: AbstractFeature() {
 
     override fun onApply(
         p: Player,
@@ -24,6 +25,7 @@ class UsagesFeature: Feature() {
         iGeneric: IGeneric
     ) {
         val itemMainHand: ItemStack = liveTool.getItemMainHand()?: return
+        if (p.gameMode == GameMode.CREATIVE) return
         if (iStage.getUsagesIaToRemove() > 0 && !itemMainHand.type.isAir) {
             CustomStack.byItemStack(itemMainHand)?.let { customStack ->
                 customStack.reduceUsages(iStage.getUsagesIaToRemove())

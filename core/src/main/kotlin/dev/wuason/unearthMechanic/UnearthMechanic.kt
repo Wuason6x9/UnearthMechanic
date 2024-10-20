@@ -80,7 +80,7 @@ class UnearthMechanic : UnearthMechanicPlugin() {
         return worldGuardComp
     }
 
-    private fun checkCompatibility(): String? {
+    fun checkCompatibility(): String? {
         for (compatibility in COMPATIBILITIES) {
             if (Bukkit.getPluginManager().getPlugin(compatibility) != null) {
                 return compatibility

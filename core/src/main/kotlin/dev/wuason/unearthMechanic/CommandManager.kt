@@ -7,6 +7,7 @@ import dev.wuason.libs.commandapi.executors.CommandArguments
 import dev.wuason.libs.commandapi.executors.CommandExecutor
 import dev.wuason.libs.commandapi.executors.PlayerCommandExecutor
 import dev.wuason.mechanics.utils.AdventureUtils
+import dev.wuason.unearthMechanic.config.Furniture
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.utils.Utils
 import org.bukkit.block.Block
@@ -33,6 +34,16 @@ class CommandManager(private val core: UnearthMechanic) : ICommandManager {
                 CommandAPICommand("debug")
                     .withPermission("unearthmechanic.debug")
                     .withSubcommands(
+                        CommandAPICommand("info")
+                            .executes(CommandExecutor { commandSender: CommandSender?, commandArguments: CommandArguments? ->
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Debug Info:")
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Engine: <aqua> ${core.checkCompatibility()?: "<red>None"}")
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Configs: <aqua>" + core.getConfigManager().getGenerics().size)
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Configs block: <aqua>" + core.getConfigManager().getGenerics().count { it.value is Block })
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Configs furniture: <aqua>" + core.getConfigManager().getGenerics().count { it.value is Furniture })
+                                AdventureUtils.sendMessage(commandSender, "<yellow>Version: <aqua>" + core.description.version)
+                            })
+                        ,
                         CommandAPICommand("block_info")
                             .executesPlayer(PlayerCommandExecutor { player, args ->
                                 val block = player.rayTraceBlocks(10.0)?.hitBlock?: run {

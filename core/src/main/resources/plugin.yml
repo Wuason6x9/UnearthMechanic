@@ -10,3 +10,9 @@ softdepend:
   - ItemsAdder
   - Oraxen
   - WorldGuard
+libraries:
+  - "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
+permissions:
+  unearthMechanic.bypass:
+    description: Allows the player to bypass the UnearthMechanic
+    default: op

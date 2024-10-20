@@ -3,6 +3,7 @@ package dev.wuason.unearthMechanic.utils
 import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.StageData
+import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
@@ -100,6 +101,18 @@ class Utils {
                 result = 31 * result + element.hashCode()
             }
             return result
+        }
+
+        /**
+         * Checks if the given location is an exact block location.
+         *
+         * @param loc1 The first location to compare.
+         * @param loc2 The second location to compare.
+         * @return True if the locations are the same block location, otherwise false.
+         */
+
+        fun isExactBlockLocation(loc1: Location, loc2: Location): Boolean {
+            return loc1.blockX == loc2.blockX && loc1.blockY == loc2.blockY && loc1.blockZ == loc2.blockZ
         }
 
     }
