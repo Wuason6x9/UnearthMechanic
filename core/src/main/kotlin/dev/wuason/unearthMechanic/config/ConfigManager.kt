@@ -70,8 +70,15 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
 
                         val sectionStage: Section = sectionStages.getSection(keyStage) ?: continue
+                        var stageType: StageType = StageType.valueOf(type.name.uppercase(Locale.ENGLISH))
+                        var itemStageId: String? = null
+                        for (t in StageType.values()) {
+                            sectionStage.getString("${t.getRoute()}_id")?.let {
+                                stageType = t
+                                itemStageId = it
+                            }
+                        }
 
-                        val itemStageId: String? = sectionStage.getString("${type.getRoute()}_id")
                         val remove: Boolean = sectionStage.getBoolean("remove", false)
                         val drops: List<Drop> = sectionStage.getStringList("drops", emptyList()).map {
                             val split: List<String> = it.split(";")
@@ -89,7 +96,6 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             val split: List<String> = it.split(";")
                             Item(split[0], split[1], split[2].toInt())
                         }
-
                         val sounds: List<Sound> = sectionStage.getMapList("sounds", emptyList()).filter {
                             it.containsKey("sound") && it["sound"] is String && (it["sound"] as String).isNotBlank()
                         }.map {
@@ -99,7 +105,24 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             val delay = it.getOrDefault("delay", 0) as Number
                             Sound(sound, volume.toFloat(), pitch.toFloat(), delay.toLong())
                         }
-                        val stage: Stage = Stage(
+                        val stage: Stage = stageType?.let {
+                            stageType.getClazz().declaredConstructors[0].newInstance(
+                                stages.size,
+                                itemStageId,
+                                drops,
+                                remove,
+                                removeItemMainHand,
+                                durabilityToRemove,
+                                usagesIaToRemove,
+                                onlyOneDrop,
+                                reduceItemMainHand,
+                                items,
+                                onlyOneItem,
+                                sounds,
+                                delay,
+                                toolAnimDelay
+                            ) as Stage
+                        }?: Stage(
                             stages.size,
                             itemStageId,
                             drops,
@@ -130,11 +153,28 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                         val constructor: Constructor<*> = type.getClazz().declaredConstructors[0]
 
-                        val generic: IGeneric = constructor.newInstance(cid, tools, if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId, stages, notProtected) as IGeneric
+                        val baseStage: Stage = StageType.valueOf(type.name.uppercase(Locale.ENGLISH)).getClazz().declaredConstructors[0].newInstance(
+                            -1,
+                            if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId,
+                            listOf<Drop>(),
+                            false,
+                            false,
+                            0,
+                            0,
+                            false,
+                            0,
+                            listOf<Item>(),
+                            false,
+                            listOf<Sound>(),
+                            0,
+                            false
+                        ) as Stage
+
+                        val generic: IGeneric = constructor.newInstance(cid, tools, baseStage, stages, notProtected) as IGeneric
 
                         generics[generic.getId()] = generic
 
-                        generic.getTools().forEach { tool: ITool -> putTool(generic.getBaseItemId(), tool.getItemId(), generic) }
+                        generic.getTools().forEach { tool: ITool -> putTool(generic.getBaseStage().getItemId()!!, tool.getItemId(), generic) }
                     }
 
                 }
@@ -195,6 +235,23 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
         }
 
         fun getClazz(): Class<out Generic> {
+            return clazz
+        }
+    }
+
+    enum class StageType(private val route: String, private val clazz: Class<out Stage>) {
+        BLOCK("block", BlockStage::class.java),
+        FURNITURE("furniture", FurnitureStage::class.java);
+
+        fun getName(): String {
+            return route.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ENGLISH) else it.toString() }
+        }
+
+        fun getRoute(): String {
+            return route
+        }
+
+        fun getClazz(): Class<out Stage> {
             return clazz
         }
     }

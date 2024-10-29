@@ -57,7 +57,7 @@ class CommandManager(private val core: UnearthMechanic) : ICommandManager {
                                 AdventureUtils.sendMessage(player, "<yellow>StageData Info:")
                                 AdventureUtils.sendMessage(player, "<yellow>Stage actual: <aqua>" + stageData.getStage())
                                 AdventureUtils.sendMessage(player, "<yellow>Generic id: <aqua>" + stageData.getGeneric().getId())
-                                AdventureUtils.sendMessage(player, "<yellow>BaseItem id: <aqua>" + stageData.getGeneric().getBaseItemId())
+                                AdventureUtils.sendMessage(player, "<yellow>BaseItem id: <aqua>" + stageData.getGeneric().getBaseStage().getItemId())
                                 AdventureUtils.sendMessage(player, "<yellow>Actual item id: <aqua>" + stageData.getActualItemId())
                                 AdventureUtils.sendMessage(player, "<yellow>Loc: <aqua>" + stageData.getLocation())
                             }),

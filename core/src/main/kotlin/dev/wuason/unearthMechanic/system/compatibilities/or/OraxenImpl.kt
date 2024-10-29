@@ -33,7 +33,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
+        if (event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,
@@ -46,7 +46,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractBlock(event: OraxenStringBlockInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,
@@ -59,7 +59,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,

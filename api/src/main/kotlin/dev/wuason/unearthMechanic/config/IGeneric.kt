@@ -20,11 +20,11 @@ interface IGeneric {
     fun getTools(): Set<ITool>
 
     /**
-     * Retrieves the identifier for the base item.
+     * Retrieves the base stage of the current instance.
      *
-     * @return the base item ID as a String.
+     * @return An instance of `IStage` representing the base stage.
      */
-    fun getBaseItemId(): String
+    fun getBaseStage(): IStage
 
     /**
      * Retrieves the list of stages associated with the current object.

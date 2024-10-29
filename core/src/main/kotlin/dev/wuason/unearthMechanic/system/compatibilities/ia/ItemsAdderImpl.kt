@@ -37,7 +37,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
-        if (event.action == Action.RIGHT_CLICK_BLOCK && event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.action == Action.RIGHT_CLICK_BLOCK && event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "ia:" + event.namespacedID,
@@ -50,7 +50,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        if (event.player != null && event.bukkitEntity != null) {
+        if (event.bukkitEntity != null) {
             stageManager.interact(
                 event.player,
                 "ia:" + event.namespacedID,
@@ -113,6 +113,9 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         generic: IGeneric,
         stage: IStage
     ) {
+        if (stage is IBlockStage) {
+
+        }
         if (generic is IBlock) {
             handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
@@ -164,10 +167,10 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (stage is IBlockStage) {
             loc.block.type = org.bukkit.Material.AIR
         }
-        else if (generic is IFurniture) {
+        else if (stage is IFurnitureStage) {
             if (event is FurnitureInteractEvent) {
                 event.furniture?.remove(false)
             }

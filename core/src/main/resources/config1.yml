@@ -4,11 +4,8 @@ unearth:
     fish_destroyed1:
       base:
         - "ia:elitefantasy:fish_destroyed_sand_1;extension_1" #Item base
-
         - "ia:elitefantasy:fish_destroyed_sand_easd;extension_2" #Item base
-
         - "ia:elitefantasy:fish_destroyed_sand_fwe2;extension_3" #Item base
-
 
       tool:
         - ia:elitefantasy:big_brush;depth=1;deep=1;size=1
@@ -56,6 +53,15 @@ unearth:
             drops:
               - "ia:elitefantasy:fish_destroyed_1;1-64;55"
   furniture:
+    test_furniture:
+      base:
+        - "ia:elitefantasy:fish_destroyed_sand_1" #Item base
+      tool:
+        - "mc:air"
+      transformation:
+        stages:
+          1:
+            block_id: "ia:elitefantasy:fish_destroyed_sand_2"
     fish_destroyed:
       base:
         - "ia:elitefantasy:fish_destroyed_sand_1" #Item base
