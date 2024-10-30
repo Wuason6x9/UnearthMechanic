@@ -177,6 +177,17 @@ tasks {
     build {
         dependsOn("shadowJar")
     }
+
 }
 
+gradle.projectsEvaluated {
+
+}
+val file = file("readme.md")
+gradle.projectsEvaluated {
+    val content = file.readText()
+    val newContent = content.replace(Regex("(?<=UnearthMechanic/)(.*?)(?=/javadoc)"), "${project.version}")
+    file.writeText(newContent)
+    println("Readme.md updated")
+}
 
