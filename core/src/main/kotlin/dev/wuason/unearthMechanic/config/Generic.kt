@@ -49,4 +49,9 @@ open class Generic(private val id: String, private val tools: Set<ITool>, privat
     override fun isNotProtect(): Boolean {
         return notProtected
     }
+
+    override fun getBackStage(currentStage: IStage): IStage {
+        if (currentStage.getStage() <= 0) return baseStage
+        return stages[currentStage.getStage() - 1]
+    }
 }

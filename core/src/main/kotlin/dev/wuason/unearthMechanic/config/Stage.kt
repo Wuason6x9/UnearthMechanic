@@ -86,6 +86,7 @@ open class Stage(
         if(drops.isEmpty()) return
         if (isOnlyOneDrop()) {
             drops[Random.nextInt(drops.size)].dropItem(loc, true)
+            return
         }
         drops.forEach { it.dropItem(loc, true) }
     }

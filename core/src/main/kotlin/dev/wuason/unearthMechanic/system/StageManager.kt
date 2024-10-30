@@ -246,11 +246,14 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 e.printStackTrace()
             }
         }
-
         stage.getItemId()?.let {
-
             if (isSimilarCompatibility(it, compatibility)) {
+
+                if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                }
                 compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+
             } else {
                 val c: ICompatibility =
                     getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
@@ -281,7 +284,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
     override fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean {
-        return adapterId.contains(compatibility.adapterId(), true)
+        return adapterId.substring(0, adapterId.indexOf(":")).equals(compatibility.adapterId(), true)
     }
 
     override fun getAnimator(): IAnimationManager {

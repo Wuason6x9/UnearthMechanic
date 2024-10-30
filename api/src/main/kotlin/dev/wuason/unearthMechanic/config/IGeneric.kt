@@ -70,4 +70,12 @@ interface IGeneric {
      * @return true if the instance is not protected, false otherwise.
      */
     fun isNotProtect(): Boolean
+
+    /**
+     * Retrieves the stage that precedes the provided current stage.
+     *
+     * @param currentStage The current stage from which to retrieve the preceding stage.
+     * @return The stage instance that precedes the current stage.
+     */
+    fun getBackStage(currentStage: IStage): IStage
 }

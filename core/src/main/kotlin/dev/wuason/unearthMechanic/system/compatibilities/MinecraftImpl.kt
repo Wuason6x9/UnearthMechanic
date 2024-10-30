@@ -89,10 +89,10 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (stage is IBlockStage) {
             handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
-        else if (generic is IFurniture) {
+        else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
     }
@@ -105,11 +105,8 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (event is PlayerInteractEvent) {
             loc.block.type = Material.AIR
-        }
-        else if (generic is IFurniture) {
-            throw UnsupportedOperationException("Minecraft does not support furniture stages")
         }
     }
 
@@ -121,7 +118,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         generic: IGeneric,
         stage: Int
     ): Int {
-        if (generic is IBlock && event is PlayerInteractEvent) {
+        if (event is PlayerInteractEvent) {
             val block: Block = event.clickedBlock!!
             return Utils.calculateHashCode(block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode(), block.hashCode())
         }
