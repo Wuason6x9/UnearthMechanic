@@ -7,5 +7,5 @@ package dev.wuason.unearthMechanic.config
  * The interface is utilized to detect if an object is a block and to handle block-specific
  * interactions and events.
  */
-interface IBlock {
+interface IBlock: IGeneric {
 }

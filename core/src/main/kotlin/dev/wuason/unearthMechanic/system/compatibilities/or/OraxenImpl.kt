@@ -33,7 +33,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
+        if (event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,
@@ -46,7 +46,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractBlock(event: OraxenStringBlockInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,
@@ -59,7 +59,7 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
-        if (event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "or:" + event.mechanic.itemID,
@@ -102,6 +102,12 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
     ) {
         OraxenFurniture.getFurnitureMechanic(adapterId.replace("or:", "")).place(location, yaw, blockFace)
     }
+    private fun placeFurniture(
+        adapterId: String,
+        location: Location,
+    ) {
+        OraxenFurniture.getFurnitureMechanic(adapterId.replace("or:", "")).place(location, 0f, BlockFace.UP)
+    }
 
     private fun breakFurniture(entity: Entity, player: Player, id: String) {
         OraxenFurniture.remove(entity, player, Drop(mutableListOf(), false, false, id))
@@ -132,9 +138,9 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (stage is IBlockStage) {
             handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
-        } else if (generic is IFurniture) {
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
     }
@@ -163,6 +169,8 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         if (event is OraxenFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
             placeFurniture(itemId, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
+        } else {
+            placeFurniture(itemId, loc)
         }
     }
 
@@ -174,12 +182,11 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (event is OraxenNoteBlockInteractEvent || event is OraxenStringBlockInteractEvent) {
             loc.block.type = org.bukkit.Material.AIR
-        } else if (generic is IFurniture) {
-            if (event is OraxenFurnitureInteractEvent) {
-                breakFurniture(event.baseEntity, player, event.mechanic.itemID)
-            }
+        }
+        if (event is OraxenFurnitureInteractEvent) {
+            breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
     }
 
@@ -191,30 +198,28 @@ class OraxenImpl(private val core: UnearthMechanic, private val stageManager: St
         generic: IGeneric,
         stage: Int
     ): Int {
-        if (generic is IBlock) {
-            if (event is OraxenNoteBlockInteractEvent) {
-                val block: Block = event.block
-                return Utils.calculateHashCode(
-                    block.type.hashCode(),
-                    block.blockData.hashCode(),
-                    block.state.hashCode(),
-                    event.mechanic.itemID.hashCode(),
-                    block.hashCode()
-                )
-            }
-            if (event is OraxenStringBlockInteractEvent) {
-                val block: Block = event.block
-                return Utils.calculateHashCode(
-                    block.type.hashCode(),
-                    block.blockData.hashCode(),
-                    block.state.hashCode(),
-                    event.mechanic.itemID.hashCode(),
-                    block.hashCode()
-                )
-            }
+        if (event is OraxenNoteBlockInteractEvent) {
+            val block: Block = event.block
+            return Utils.calculateHashCode(
+                block.type.hashCode(),
+                block.blockData.hashCode(),
+                block.state.hashCode(),
+                event.mechanic.itemID.hashCode(),
+                block.hashCode()
+            )
+        }
+        if (event is OraxenStringBlockInteractEvent) {
+            val block: Block = event.block
+            return Utils.calculateHashCode(
+                block.type.hashCode(),
+                block.blockData.hashCode(),
+                block.state.hashCode(),
+                event.mechanic.itemID.hashCode(),
+                block.hashCode()
+            )
         }
 
-        if (generic is IFurniture && event is OraxenFurnitureInteractEvent) {
+        if (event is OraxenFurnitureInteractEvent) {
             val entity: Entity = event.baseEntity
             var result: Int = entity.type.hashCode()
             result = 31 * result + entity.isDead.hashCode()

@@ -7,5 +7,5 @@ package dev.wuason.unearthMechanic.config
  * and their associated functionality, such as handling player interactions
  * and furniture stages.
  */
-interface IFurniture {
+interface IFurniture: IGeneric {
 }

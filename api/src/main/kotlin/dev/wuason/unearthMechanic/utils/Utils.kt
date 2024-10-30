@@ -49,7 +49,7 @@ class Utils {
             for (stage in stageData.getStage() downTo 0) {
                 stageData.getGeneric().getStages()[stage].getItemId()?.let { return it }
             }
-            return stageData.getGeneric().getBaseItemId()
+            return stageData.getGeneric().getBaseStage().getItemId()!!
         }
 
         /**

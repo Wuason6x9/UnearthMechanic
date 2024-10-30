@@ -18,7 +18,7 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.util.RayTraceResult
 import kotlin.random.Random
 
-class Stage(
+open class Stage(
     private val stage: Int, private val itemId: String?, private val drops: List<Drop>, private val remove: Boolean, private val removeItemMainHand: Boolean,
     private val durabilityToRemove: Int,
     private val usagesIaToRemove: Int, private val onlyOneDrop: Boolean,
@@ -86,6 +86,7 @@ class Stage(
         if(drops.isEmpty()) return
         if (isOnlyOneDrop()) {
             drops[Random.nextInt(drops.size)].dropItem(loc, true)
+            return
         }
         drops.forEach { it.dropItem(loc, true) }
     }

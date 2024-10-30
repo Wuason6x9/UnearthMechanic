@@ -65,6 +65,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
     fun interact(player: Player, baseItemId: String, location: Location, event: Event, compatibility: ICompatibility) {
+        if (player.isSneaking) return
         if (StageData.hasStageData(location)) {
             val stageData: StageData = StageData.fromLoc(location) ?: return
             val toolUsed: String = Adapter.getAdapterIdBasic(
@@ -99,9 +100,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
 
-            if (event is Cancellable) {
-                event.isCancelled = true
-            }
             val iTool: ITool = stageData.getGeneric().getTool(toolUsed) ?: throw NullPointerException(
                 "Tool not found for $toolUsed in ${
                     stageData.getGeneric().getId()
@@ -135,10 +133,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         val generic: IGeneric = core.getConfigManager().getGeneric(baseItemId, toolUsed) ?: return
 
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !generic.isNotProtect()) {
-
-            if (event is Cancellable) {
-                event.isCancelled = true
-            }
 
             val iTool: ITool = generic.getTool(toolUsed)
                 ?: throw NullPointerException("Tool not found for $toolUsed in ${generic.getId()} mabye is duplicated config")
@@ -184,6 +178,9 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         if (stage.getMaxCorrectDelay(toolUsed) > 0) {
             if (loc in delays) return
+            if (event is Cancellable) {
+                event.isCancelled = true
+            }
             val validation: Validation = Validation(player, compatibility, event, loc, toolUsed, generic, stage)
             validation.start()
             val delayTask: DelayTask =
@@ -236,6 +233,12 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         Bukkit.getPluginManager().callEvent(applyStageEvent)
         if (applyStageEvent.isCancelled) return
 
+        if (validation == null) {
+            if (event is Cancellable) {
+                event.isCancelled = true
+            }
+        }
+
         Features.getFeatures().forEach { feature ->
             try {
                 feature.onApply(player, compatibility, event, loc, toolUsed, stage, generic)
@@ -243,11 +246,14 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 e.printStackTrace()
             }
         }
-
         stage.getItemId()?.let {
-
             if (isSimilarCompatibility(it, compatibility)) {
+
+                if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                }
                 compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+
             } else {
                 val c: ICompatibility =
                     getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
@@ -278,7 +284,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
     override fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean {
-        return adapterId.contains(compatibility.adapterId(), true)
+        return adapterId.substring(0, adapterId.indexOf(":")).equals(compatibility.adapterId(), true)
     }
 
     override fun getAnimator(): IAnimationManager {

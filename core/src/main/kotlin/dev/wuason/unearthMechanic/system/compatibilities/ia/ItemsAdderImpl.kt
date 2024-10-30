@@ -37,7 +37,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
-        if (event.action == Action.RIGHT_CLICK_BLOCK && event.player != null && event.hand == EquipmentSlot.HAND) {
+        if (event.action == Action.RIGHT_CLICK_BLOCK && event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
                 "ia:" + event.namespacedID,
@@ -50,7 +50,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        if (event.player != null && event.bukkitEntity != null) {
+        if (event.bukkitEntity != null) {
             stageManager.interact(
                 event.player,
                 "ia:" + event.namespacedID,
@@ -75,7 +75,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         CustomBlock.place(adapterId.replace("ia:", ""), location)
     }
 
-    private fun breakBlock(location: Location?, player: Player?) {
+    private fun breakBlock(location: Location?) {
         CustomBlock.remove(location)
     }
 
@@ -113,10 +113,10 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
+        if (stage is IBlockStage) {
             handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
-        else if (generic is IFurniture) {
+        else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
         }
     }
@@ -154,6 +154,9 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
                 }
             }
         }
+        else {
+            CustomFurniture.spawn(itemId.replace("ia:", ""), loc.block)
+        }
     }
 
     override fun handleRemove(
@@ -164,13 +167,11 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         generic: IGeneric,
         stage: IStage
     ) {
-        if (generic is IBlock) {
-            loc.block.type = org.bukkit.Material.AIR
+        if (event is CustomBlockInteractEvent) {
+            breakBlock(loc)
         }
-        else if (generic is IFurniture) {
-            if (event is FurnitureInteractEvent) {
-                event.furniture?.remove(false)
-            }
+        if (event is FurnitureInteractEvent) {
+            event.furniture?.remove(false)
         }
     }
 
@@ -182,17 +183,13 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         generic: IGeneric,
         stage: Int
     ): Int {
-        if (generic is IBlock) {
-            if (event is CustomBlockInteractEvent) {
-                val block: Block = event.blockClicked
-                return Utils.calculateHashCode(block.location.hashCode(), block.hashCode(), block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode())
-            }
+        if (event is CustomBlockInteractEvent) {
+            val block: Block = event.blockClicked
+            return Utils.calculateHashCode(block.location.hashCode(), block.hashCode(), block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode())
         }
-        else if (generic is IFurniture) {
-            if (event is FurnitureInteractEvent) {
-                val entity: Entity = event.bukkitEntity
-                return Utils.calculateHashCode(entity.location.hashCode(), entity.hashCode(), entity.type.hashCode(), entity.uniqueId.hashCode(), entity.isDead.hashCode(), entity.facing.hashCode())
-            }
+        if (event is FurnitureInteractEvent) {
+            val entity: Entity = event.bukkitEntity
+            return Utils.calculateHashCode(entity.location.hashCode(), entity.hashCode(), entity.type.hashCode(), entity.uniqueId.hashCode(), entity.isDead.hashCode(), entity.facing.hashCode())
         }
         return -1
     }
