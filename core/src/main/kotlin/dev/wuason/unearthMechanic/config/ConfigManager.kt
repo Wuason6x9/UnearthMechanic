@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.libs.boostedyaml.YamlDocument
 import dev.wuason.libs.boostedyaml.block.implementation.Section
 import dev.wuason.libs.boostedyaml.settings.dumper.DumperSettings
@@ -8,14 +10,16 @@ import dev.wuason.libs.boostedyaml.settings.loader.LoaderSettings
 import dev.wuason.libs.boostedyaml.settings.updater.UpdaterSettings
 import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.utils.Utils.Companion.toAdapter
 import java.io.File
 import java.lang.reflect.Constructor
 import java.util.Locale
+import kotlin.jvm.optionals.getOrNull
 
 class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
     private val generics: HashMap<String, IGeneric> = HashMap()
-    private val genericsBaseItemId: HashMap<String, HashMap<String, IGeneric>> = HashMap()
+    private val genericsBaseItemId: HashMap<AdapterData, HashMap<AdapterData, IGeneric>> = HashMap()
 
     override fun loadConfig() {
         generics.clear()
@@ -79,10 +83,12 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             }
                         }
 
+                        val stageAdapterData: AdapterData? = itemStageId?.let { Adapter.getAdapterData(it).getOrNull() }
+
                         val remove: Boolean = sectionStage.getBoolean("remove", false)
                         val drops: List<Drop> = sectionStage.getStringList("drops", emptyList()).map {
                             val split: List<String> = it.split(";")
-                            Drop(split[0], split[1], split[2].toInt())
+                            Drop(Adapter.getAdapterData(split[0]).getOrNull()?: throw NullPointerException("The adapter id: ${split[0]} is not valid!"), split[1], split[2].toInt())
                         }
                         val removeItemMainHand: Boolean = sectionStage.getBoolean("remove_item_main_hand", false)
                         val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
@@ -94,7 +100,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val toolAnimDelay = sectionStage.getBoolean("tool_anim_on_delay", false)
                         val items: List<Item> = sectionStage.getStringList("items_add", emptyList()).map {
                             val split: List<String> = it.split(";")
-                            Item(split[0], split[1], split[2].toInt())
+                            Item(Adapter.getAdapterData(split[0]).getOrNull()?: throw NullPointerException("The adapter id: ${split[0]} is not valid!"), split[1], split[2].toInt())
                         }
                         val sounds: List<Sound> = sectionStage.getMapList("sounds", emptyList()).filter {
                             it.containsKey("sound") && it["sound"] is String && (it["sound"] as String).isNotBlank()
@@ -108,7 +114,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val stage: Stage = stageType?.let {
                             stageType.getClazz().declaredConstructors[0].newInstance(
                                 stages.size,
-                                itemStageId,
+                                stageAdapterData,
                                 drops,
                                 remove,
                                 removeItemMainHand,
@@ -124,7 +130,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             ) as Stage
                         }?: Stage(
                             stages.size,
-                            itemStageId,
+                            stageAdapterData,
                             drops,
                             remove,
                             removeItemMainHand,
@@ -143,8 +149,8 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                     }
 
-                    for ((i, baseItemId) in basesItemId.withIndex()) {
-                        var cid = getCorrectId(id, baseItemId)
+                    for ((i, baseItemId1) in basesItemId.withIndex()) {
+                        var cid = getCorrectId(id, baseItemId1)
                         if (basesItemId.size > 1) {
                             if (cid.equals(id)) {
                                 cid = "${id}_${i}"
@@ -155,7 +161,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                         val baseStage: Stage = StageType.valueOf(type.name.uppercase(Locale.ENGLISH)).getClazz().declaredConstructors[0].newInstance(
                             -1,
-                            if (baseItemId.contains(";")) baseItemId.substring(0, baseItemId.indexOf(';')) else baseItemId,
+                            if (baseItemId1.contains(";")) baseItemId1.substring(0, baseItemId1.indexOf(';')).toAdapter() else baseItemId1.toAdapter(),
                             listOf<Drop>(),
                             false,
                             false,
@@ -174,7 +180,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
                         generics[generic.getId()] = generic
 
-                        generic.getTools().forEach { tool: ITool -> putTool(generic.getBaseStage().getItemId()!!, tool.getItemId(), generic) }
+                        generic.getTools().forEach { tool: ITool -> putTool(generic.getBaseStage().getAdapterData()!!, tool.getAdapterData(), generic) }
                     }
 
                 }
@@ -186,34 +192,31 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
         AdventureUtils.sendMessagePluginConsole(core, "<aqua> ${type.getName()} loaded: <yellow>${generics.count { type.getClazz().isInstance(it.value) }}")
     }
 
-    private fun putTool(baseItemId: String, tool: String, generic: IGeneric) {
-        if (!genericsBaseItemId.containsKey(baseItemId)) {
-            genericsBaseItemId[baseItemId] = HashMap()
+    private fun putTool(baseAdapterData: AdapterData, tool: AdapterData, generic: IGeneric) {
+        if (!genericsBaseItemId.containsKey(baseAdapterData)) {
+            genericsBaseItemId[baseAdapterData] = HashMap()
         }
-        val map: HashMap<String, IGeneric> = genericsBaseItemId[baseItemId] ?: return
-        if (!map.containsKey(tool)) {
-            map[tool] = generic
-        }
+        genericsBaseItemId[baseAdapterData]?.set(tool, generic)
     }
 
-    override fun validTool(baseItemId: String, tool: String): Boolean {
-        return genericsBaseItemId.containsKey(baseItemId) && genericsBaseItemId[baseItemId]?.containsKey(tool) ?: false
+    override fun validTool(baseAdapterData: AdapterData, tool: AdapterData): Boolean {
+        return genericsBaseItemId.containsKey(baseAdapterData) && genericsBaseItemId[baseAdapterData]?.containsKey(tool) ?: false
     }
 
-    override fun validBaseItemId(baseItemId: String): Boolean {
-        return genericsBaseItemId.containsKey(baseItemId)
+    override fun validBaseItemId(baseAdapterData: AdapterData): Boolean {
+        return genericsBaseItemId.containsKey(baseAdapterData)
     }
 
-    override fun getGeneric(baseItemId: String, tool: String): IGeneric? {
-        if (!validTool(baseItemId, tool)) return null
-        return genericsBaseItemId[baseItemId]?.get(tool)
+    override fun getGeneric(baseAdapterData: AdapterData, tool: AdapterData): IGeneric? {
+        if (!validTool(baseAdapterData, tool)) return null
+        return genericsBaseItemId[baseAdapterData]?.get(tool)
     }
 
     override fun getGenerics(): HashMap<String, IGeneric> {
         return generics
     }
 
-    override fun getGenericsBaseItemId(): HashMap<String, HashMap<String, IGeneric>> {
+    override fun getGenericsBaseItemId(): HashMap<AdapterData, HashMap<AdapterData, IGeneric>> {
         return genericsBaseItemId
     }
 

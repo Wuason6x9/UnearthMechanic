@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
+
 /**
  * Represents a generic interface that provides various methods to access and manage generic items.
  */
@@ -38,23 +40,24 @@ interface IGeneric {
      *
      * @return A hashmap where the keys are stage item IDs (String) and the values are IStage instances.
      */
-    fun getStagesItemsId(): HashMap<String, IStage>
+    fun getStagesAdapterData(): HashMap<AdapterData, IStage>
+
 
     /**
-     * Retrieves an ITool instance based on the provided tool ID.
+     * Retrieves the tool associated with the specified adapter data.
      *
-     * @param toolId The unique identifier of the tool to retrieve.
-     * @return The ITool instance if found, or null otherwise.
+     * @param tool The AdapterData representing the tool to retrieve.
+     * @return An ITool instance if a tool corresponding to the adapter data exists, or null otherwise.
      */
-    fun getTool(toolId: String): ITool?
+    fun getTool(tool: AdapterData): ITool?
 
     /**
-     * Checks if a tool with the specified ID exists within the collection.
+     * Determines if a specific tool exists within the system.
      *
-     * @param toolId the unique identifier of the tool to be checked
-     * @return true if the tool exists, false otherwise
+     * @param tool The `AdapterData` representing the tool to check for existence.
+     * @return `true` if the tool exists, otherwise `false`.
      */
-    fun existsTool(toolId: String): Boolean
+    fun existsTool(tool: AdapterData): Boolean
 
     /**
      * Determines if the specified stage is the last stage.

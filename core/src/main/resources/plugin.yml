@@ -10,6 +10,7 @@ softdepend:
   - ItemsAdder
   - Oraxen
   - WorldGuard
+  - Nexo
 libraries:
   - "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
 permissions:

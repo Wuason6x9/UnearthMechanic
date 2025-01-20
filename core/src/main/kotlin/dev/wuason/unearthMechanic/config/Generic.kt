@@ -1,16 +1,17 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 
 open class Generic(private val id: String, private val tools: Set<ITool>, private val baseStage: IStage, private val stages: List<IStage> = mutableListOf(), private val notProtected: Boolean): IGeneric {
 
-    private val stagesItemsId: HashMap<String, IStage> = HashMap<String, IStage>()
+    private val stagesItemsId: HashMap<AdapterData, IStage> = HashMap()
 
     init {
         for (value in stages) {
-            value.getItemId()?.let { stagesItemsId[it] = value }
+            value.getAdapterData()?.let { stagesItemsId[it] = value }
         }
     }
 
@@ -30,16 +31,16 @@ open class Generic(private val id: String, private val tools: Set<ITool>, privat
         return stages
     }
 
-    override fun getStagesItemsId(): HashMap<String, IStage> {
+    override fun getStagesAdapterData(): HashMap<AdapterData, IStage> {
         return stagesItemsId
     }
 
-    override fun getTool(toolId: String): ITool? {
-        return tools.find { it.getItemId().equals(toolId, true) }
+    override fun getTool(tool: AdapterData): ITool? {
+        return tools.find { it.getAdapterData() == tool }
     }
 
-    override fun existsTool(toolId: String): Boolean {
-        return tools.any { it.getItemId().equals(toolId, true) }
+    override fun existsTool(tool: AdapterData): Boolean {
+        return tools.any { it.getAdapterData() == tool }
     }
 
     override fun isLastStage(stage: IStage): Boolean {

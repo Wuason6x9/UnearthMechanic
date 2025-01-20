@@ -1,8 +1,10 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
+
 class FurnitureStage(
     stage: Int,
-    itemId: String?,
+    adapterData: AdapterData?,
     drops: List<Drop>,
     remove: Boolean,
     removeItemMainHand: Boolean,
@@ -16,6 +18,6 @@ class FurnitureStage(
     delay: Long,
     toolAnimDelay: Boolean
 ) : Stage(
-    stage, itemId, drops, remove, removeItemMainHand, durabilityToRemove, usagesIaToRemove,
+    stage, adapterData, drops, remove, removeItemMainHand, durabilityToRemove, usagesIaToRemove,
     onlyOneDrop, reduceItemHand, items, onlyOneItem, sounds, delay, toolAnimDelay
 ), IFurnitureStage

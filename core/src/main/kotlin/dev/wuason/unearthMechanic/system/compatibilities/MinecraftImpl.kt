@@ -1,7 +1,10 @@
 package dev.wuason.unearthMechanic.system.compatibilities
 
-import dev.wuason.mechanics.compatibilities.adapter.Adapter
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterComp
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
@@ -21,28 +24,21 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import java.util.*
 
-class MinecraftImpl(private val core: UnearthMechanic, private val stageManager: StageManager): ICompatibility {
-    override fun loaded(): Boolean {
-        return true
-    }
-
-    override fun enabled(): Boolean {
-        return true
-    }
-
-    override fun name(): String {
-        return "Minecraft"
-    }
-
-    override fun adapterId(): String {
-        return "mc"
-    }
+class MinecraftImpl(
+    pluginName: String,
+    private val core: UnearthMechanicPlugin,
+    private val stageManager: StageManager,
+    adapterComp: AdapterComp
+): ICompatibility(
+    pluginName,
+    adapterComp
+) {
 
     @EventHandler
     fun onInteractBlock(event: PlayerInteractEvent) {
         if (event.hasBlock() && event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() == Event.Result.ALLOW) {
             val block: Block = event.clickedBlock?: return
-            val adapterId = Adapter.getAdapterIdBasic(block)?: throw NullPointerException("Adapter ID not found")
+            val adapterId = Adapter.getAdapterId(block)
             if (adapterId.contains("mc:")) stageManager.interact(event.player, adapterId, block.location, event, this)
         }
     }
@@ -51,26 +47,26 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
     fun onBlockBreak(event: BlockBreakEvent) {
         val stageData: StageData = StageData.fromBlock(event.block) ?: return
         val stageDataBack: StageData = stageData.getBackStageData() ?: return
-        if(stageDataBack.getActualItemId().startsWith("mc:", true)) {
+        if(stageDataBack.getActualAdapterData().adapter == adapterComp()) {
             StageData.removeStageData(event.block)
         }
     }
 
     private fun handleBlockStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
-        loc.block.type = Material.getMaterial(itemId.replace("mc:", "").uppercase(Locale.ENGLISH)) ?: return
+        loc.block.type = Material.getMaterial(itemAdapterData.id.uppercase(Locale.ENGLISH)) ?: return
     }
 
     private fun handleFurnitureStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
@@ -82,7 +78,7 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
 
     override fun handleStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
@@ -90,10 +86,10 @@ class MinecraftImpl(private val core: UnearthMechanic, private val stageManager:
         stage: IStage
     ) {
         if (stage is IBlockStage) {
-            handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
         else if (stage is IFurnitureStage) {
-            handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 

@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.events.PreApplyStageEvent
 import dev.wuason.unearthMechanic.system.LiveTool
 import dev.wuason.unearthMechanic.system.StageData
@@ -19,7 +20,7 @@ import org.bukkit.util.RayTraceResult
 import kotlin.random.Random
 
 open class Stage(
-    private val stage: Int, private val itemId: String?, private val drops: List<Drop>, private val remove: Boolean, private val removeItemMainHand: Boolean,
+    private val stage: Int, private val adapterData: AdapterData?, private val drops: List<Drop>, private val remove: Boolean, private val removeItemMainHand: Boolean,
     private val durabilityToRemove: Int,
     private val usagesIaToRemove: Int, private val onlyOneDrop: Boolean,
     private val reduceItemHand: Int, private val items: List<Item>, private val onlyOneItem: Boolean, private val sounds: List<Sound>,
@@ -46,8 +47,8 @@ open class Stage(
         return durabilityToRemove
     }
 
-    override fun getItemId(): String? {
-        return itemId
+    override fun getAdapterData(): AdapterData? {
+        return adapterData
     }
 
     override fun getStage(): Int {

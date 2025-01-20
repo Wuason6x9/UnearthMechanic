@@ -1,8 +1,17 @@
-package dev.wuason.unearthMechanic.system.compatibilities.or
+package dev.wuason.unearthMechanic.system.compatibilities.nexo
 
-import dev.wuason.libs.adapter.Adapter
+import com.nexomc.nexo.api.NexoBlocks
+import com.nexomc.nexo.api.NexoFurniture
+import com.nexomc.nexo.api.events.custom_block.noteblock.NexoNoteBlockBreakEvent
+import com.nexomc.nexo.api.events.custom_block.noteblock.NexoNoteBlockInteractEvent
+import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockBreakEvent
+import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockInteractEvent
+import com.nexomc.nexo.api.events.furniture.NexoFurnitureBreakEvent
+import com.nexomc.nexo.api.events.furniture.NexoFurnitureInteractEvent
+import com.nexomc.nexo.utils.drops.Drop
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
+import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
@@ -10,15 +19,7 @@ import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.utils.Utils
-import io.th0rgal.oraxen.api.OraxenBlocks
-import io.th0rgal.oraxen.api.OraxenFurniture
-import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureBreakEvent
-import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureInteractEvent
-import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockBreakEvent
-import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockInteractEvent
-import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockBreakEvent
-import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockInteractEvent
-import io.th0rgal.oraxen.utils.drops.Drop
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -31,7 +32,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
-class OraxenImpl(
+class NexoImpl(
     pluginName: String,
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
@@ -42,7 +43,7 @@ class OraxenImpl(
 ) {
 
     @EventHandler
-    fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
+    fun onInteractBlock(event: NexoNoteBlockInteractEvent) {
         if (event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
             stageManager.interact(
                 event.player,
@@ -55,7 +56,7 @@ class OraxenImpl(
     }
 
     @EventHandler
-    fun onInteractBlock(event: OraxenStringBlockInteractEvent) {
+    fun onInteractBlock(event: NexoStringBlockInteractEvent) {
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -68,7 +69,7 @@ class OraxenImpl(
     }
 
     @EventHandler
-    fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
+    fun onInteractFurniture(event: NexoFurnitureInteractEvent) {
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -81,27 +82,27 @@ class OraxenImpl(
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    fun onBreakBlock(event: OraxenNoteBlockBreakEvent) {
+    fun onBreakBlock(event: NexoNoteBlockBreakEvent) {
         StageData.removeStageData(event.block)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    fun onBreakBlock(event: OraxenStringBlockBreakEvent) {
+    fun onBreakBlock(event: NexoStringBlockBreakEvent) {
         StageData.removeStageData(event.block)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
+    fun onFurnitureBreak(event: NexoFurnitureBreakEvent) {
         StageData.removeStageData(event.baseEntity.location)
     }
 
 
     private fun placeBlock(itemAdapterData: AdapterData, location: Location) {
-        OraxenBlocks.place(itemAdapterData.id, location)
+        NexoBlocks.place(itemAdapterData.id, location)
     }
 
     private fun breakBlock(location: Location, player: Player) {
-        OraxenBlocks.remove(location, player)
+        NexoBlocks.remove(location, player)
     }
 
     private fun placeFurniture(
@@ -110,17 +111,17 @@ class OraxenImpl(
         blockFace: BlockFace,
         yaw: Float
     ) {
-        OraxenFurniture.getFurnitureMechanic(itemAdapterData.id).place(location, yaw, blockFace)
+        NexoFurniture.furnitureMechanic(itemAdapterData.id)?.place(location, yaw, blockFace)
     }
     private fun placeFurniture(
         itemAdapterData: AdapterData,
         location: Location,
     ) {
-        OraxenFurniture.getFurnitureMechanic(itemAdapterData.id).place(location, 0f, BlockFace.UP)
+        NexoFurniture.furnitureMechanic(itemAdapterData.id)?.place(location, 0f, BlockFace.UP)
     }
 
     private fun breakFurniture(entity: Entity, player: Player, id: String) {
-        OraxenFurniture.remove(entity, player, Drop(mutableListOf(), false, false, id))
+        NexoFurniture.remove(entity, player, Drop(mutableListOf(), silktouch = false, fortune = false, sourceID = id))
     }
 
     override fun handleStage(
@@ -160,7 +161,7 @@ class OraxenImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        if (event is OraxenFurnitureInteractEvent) {
+        if (event is NexoFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
             placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
         } else {
@@ -176,10 +177,10 @@ class OraxenImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        if (event is OraxenNoteBlockInteractEvent || event is OraxenStringBlockInteractEvent) {
+        if (event is NexoNoteBlockInteractEvent || event is NexoStringBlockInteractEvent) {
             loc.block.type = org.bukkit.Material.AIR
         }
-        if (event is OraxenFurnitureInteractEvent) {
+        if (event is NexoFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
     }
@@ -192,7 +193,7 @@ class OraxenImpl(
         generic: IGeneric,
         stage: Int
     ): Int {
-        if (event is OraxenNoteBlockInteractEvent) {
+        if (event is NexoNoteBlockInteractEvent) {
             val block: Block = event.block
             return Utils.calculateHashCode(
                 block.type.hashCode(),
@@ -202,7 +203,7 @@ class OraxenImpl(
                 block.hashCode()
             )
         }
-        if (event is OraxenStringBlockInteractEvent) {
+        if (event is NexoStringBlockInteractEvent) {
             val block: Block = event.block
             return Utils.calculateHashCode(
                 block.type.hashCode(),
@@ -213,51 +214,38 @@ class OraxenImpl(
             )
         }
 
-        if (event is OraxenFurnitureInteractEvent) {
+        if (event is NexoFurnitureInteractEvent) {
             val entity: Entity = event.baseEntity
-            var result: Int = entity.type.hashCode()
-            result = 31 * result + entity.isDead.hashCode()
-            result = 31 * result + entity.uniqueId.hashCode()
-            result = 31 * result + entity.hashCode()
-            result = 31 * result + entity.facing.hashCode()
-            result = 31 * result + entity.location.hashCode()
-            event.block?.let {
-                result = 31 * result + it.type.hashCode()
-                result = 31 * result + it.blockData.hashCode()
-                result = 31 * result + it.state.hashCode()
-                result = 31 * result + it.hashCode()
-            }
-            event.interactionEntity?.let {
-                result = 31 * result + it.type.hashCode()
-                result = 31 * result + it.isDead.hashCode()
-                result = 31 * result + it.uniqueId.hashCode()
-                result = 31 * result + it.hashCode()
-                result = 31 * result + it.facing.hashCode()
-                result = 31 * result + it.location.hashCode()
-            }
-            return result
+            return Utils.calculateHashCode(
+                entity.type.hashCode(),
+                entity.isDead.hashCode(),
+                entity.uniqueId.hashCode(),
+                entity.hashCode(),
+                entity.facing.hashCode(),
+                entity.location.hashCode()
+            )
         }
         return -1
     }
 
     override fun getItemHand(event: Event): ItemStack? {
-        if (event is OraxenNoteBlockInteractEvent) {
+        if (event is NexoNoteBlockInteractEvent) {
             return event.itemInHand
         }
-        if (event is OraxenStringBlockInteractEvent) {
+        if (event is NexoStringBlockInteractEvent) {
             return event.itemInHand
         }
-        if (event is OraxenFurnitureInteractEvent) {
+        if (event is NexoFurnitureInteractEvent) {
             return event.itemInHand
         }
         return null
     }
 
     override fun getBlockFace(event: Event): BlockFace? {
-        if (event is OraxenNoteBlockInteractEvent) {
+        if (event is NexoNoteBlockInteractEvent) {
             return event.blockFace
         }
-        if (event is OraxenStringBlockInteractEvent) {
+        if (event is NexoStringBlockInteractEvent) {
             return event.blockFace
         }
         return null

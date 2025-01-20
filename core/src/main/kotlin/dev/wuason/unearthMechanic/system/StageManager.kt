@@ -1,7 +1,8 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.libs.protectionlib.ProtectionLib
-import dev.wuason.mechanics.compatibilities.adapter.Adapter
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.*
@@ -12,12 +13,14 @@ import dev.wuason.unearthMechanic.system.animations.IAnimationManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.system.compatibilities.ia.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.MinecraftImpl
+import dev.wuason.unearthMechanic.system.compatibilities.nexo.NexoImpl
 import dev.wuason.unearthMechanic.system.compatibilities.or.OraxenImpl
 import dev.wuason.unearthMechanic.system.features.BasicFeatures
 import dev.wuason.unearthMechanic.system.features.DurabilityFeature
 import dev.wuason.unearthMechanic.system.features.Features
 import dev.wuason.unearthMechanic.system.features.ToolSoundFeature
 import dev.wuason.unearthMechanic.utils.Utils
+import dev.wuason.unearthMechanic.utils.Utils.Companion.toAdapter
 import org.bukkit.Bukkit
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Location
@@ -29,7 +32,9 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.scheduler.BukkitTask
+import java.util.*
 import kotlin.collections.HashMap
+import kotlin.jvm.optionals.getOrNull
 
 class StageManager(private val core: UnearthMechanic) : IStageManager {
 
@@ -41,45 +46,50 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
-    private val compatibilitiesLoaded: MutableList<ICompatibility> = arrayListOf(MinecraftImpl(core, this))
+    private val compatibilitiesLoaded: MutableList<ICompatibility> = ArrayList()
 
     private val delays: HashMap<Location, BukkitTask> = HashMap()
-
-    private val compatibilities: Array<ICompatibility> = arrayOf(
-        ItemsAdderImpl(core, this),
-        OraxenImpl(core, this)
-    )
 
     private val animator: AnimationManager = AnimationManager(core)
 
     init {
-        for (compatibility in compatibilities) {
-            if (compatibility.loaded()) {
-                compatibilitiesLoaded.add(compatibility)
-            }
-        }
+
+        compatibilitiesLoaded.add(MinecraftImpl("Vanilla", core, this, Adapter.getAdapterByName("Vanilla")))
+
+        compCreator("Oraxen") { pluginName ->
+            OraxenImpl(pluginName, core, this, Adapter.getAdapterByName(pluginName))
+        } ?.let { compatibilitiesLoaded.add(it) }
+
+        compCreator("ItemsAdder") { pluginName ->
+            ItemsAdderImpl(pluginName, core, this, Adapter.getAdapterByName(pluginName))
+        } ?.let { compatibilitiesLoaded.add(it) }
+
+        compCreator("Nexo") { pluginName ->
+            NexoImpl(pluginName, core, this, Adapter.getAdapterByName(pluginName))
+        } ?.let { compatibilitiesLoaded.add(it) }
 
         compatibilitiesLoaded.forEach { compatibility ->
             Bukkit.getPluginManager().registerEvents(compatibility, core)
         }
+
     }
 
     fun interact(player: Player, baseItemId: String, location: Location, event: Event, compatibility: ICompatibility) {
         if (player.isSneaking) return
         if (StageData.hasStageData(location)) {
             val stageData: StageData = StageData.fromLoc(location) ?: return
-            val toolUsed: String = Adapter.getAdapterIdBasic(
+            val toolUsed: String = Adapter.getAdapterId(
                 animator.getAnimation(player)?.getItemMainHand() ?: player.inventory.itemInMainHand
             )
-            interactExist(player, baseItemId, location, event, compatibility, stageData, toolUsed)
+            interactExist(player, baseItemId, location, event, compatibility, stageData, toolUsed.toAdapter()!!)
             return
         }
 
-        if (core.getConfigManager().validBaseItemId(baseItemId)) {
-            val toolUsed: String = Adapter.getAdapterIdBasic(
+        if (core.getConfigManager().validBaseItemId(baseItemId.toAdapter()!!)) {
+            val toolUsed: String = Adapter.getAdapterId(
                 animator.getAnimation(player)?.getItemMainHand() ?: player.inventory.itemInMainHand
             )
-            interactNotExist(player, baseItemId, location, event, compatibility, toolUsed)
+            interactNotExist(player, baseItemId.toAdapter()!!, location, event, compatibility, toolUsed.toAdapter()!!)
             return
         }
 
@@ -92,11 +102,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         event: Event,
         compatibility: ICompatibility,
         stageData: StageData,
-        toolUsed: String
+        toolUsed: AdapterData
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
 
-        if (stageData.getActualItemId().substring(0, stageData.getActualItemId().indexOf(":")) != compatibility.adapterId()) return
+        if (stageData.getActualAdapterData().adapter != toolUsed.adapter) return
 
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
 
@@ -123,14 +133,14 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     private fun interactNotExist(
         player: Player,
-        baseItemId: String,
+        baseAdapterData: AdapterData,
         location: Location,
         event: Event,
         compatibility: ICompatibility,
-        toolUsed: String
+        toolUsed: AdapterData
     ) {
-        if (!core.getConfigManager().validTool(baseItemId, toolUsed)) return
-        val generic: IGeneric = core.getConfigManager().getGeneric(baseItemId, toolUsed) ?: return
+        if (!core.getConfigManager().validTool(baseAdapterData, toolUsed)) return
+        val generic: IGeneric = core.getConfigManager().getGeneric(baseAdapterData, toolUsed) ?: return
 
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !generic.isNotProtect()) {
 
@@ -226,7 +236,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage: Stage,
         validation: Validation? = null
     ) {
-
         if ((validation != null && !validation.validate()) || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
 
         val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
@@ -246,7 +255,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 e.printStackTrace()
             }
         }
-        stage.getItemId()?.let {
+        stage.getAdapterData()?.let {
             if (isSimilarCompatibility(it, compatibility)) {
 
                 if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
@@ -275,16 +284,12 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         return compatibilitiesLoaded
     }
 
-    override fun getCompatibilities(): Array<ICompatibility> {
-        return compatibilities
+    override fun getCompatibilityByAdapterId(adapterData: AdapterData): ICompatibility? {
+        return compatibilitiesLoaded.firstOrNull { compatibility -> compatibility.adapterComp() == adapterData.adapter }
     }
 
-    override fun getCompatibilityByAdapterId(adapterId: String): ICompatibility? {
-        return compatibilitiesLoaded.find { adapterId.contains(it.adapterId(), true) }
-    }
-
-    override fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean {
-        return adapterId.substring(0, adapterId.indexOf(":")).equals(compatibility.adapterId(), true)
+    override fun isSimilarCompatibility(adapterData: AdapterData, compatibility: ICompatibility): Boolean {
+        return compatibility.adapterComp() == adapterData.adapter
     }
 
     override fun getAnimator(): IAnimationManager {
@@ -322,4 +327,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
+    private fun compCreator(pluginName: String, compatibilityMaker: (pluginName: String) -> ICompatibility ) : ICompatibility? {
+        if (Bukkit.getPluginManager().getPlugin(pluginName) == null) return null
+        return compatibilityMaker.invoke(pluginName)
+    }
 }

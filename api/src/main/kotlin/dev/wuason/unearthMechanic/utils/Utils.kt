@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.utils
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.config.IGeneric
 import dev.wuason.unearthMechanic.config.IStage
 import dev.wuason.unearthMechanic.system.StageData
@@ -7,6 +9,7 @@ import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.absoluteValue
 
 /**
@@ -45,11 +48,11 @@ class Utils {
          * @param stageData the data representing the stage, including location, current stage, and generic information
          * @return the item ID associated with the current stage if available, otherwise the base item ID
          */
-        fun getActualItemId(stageData: StageData): String {
+        fun getActualAdapterData(stageData: StageData): AdapterData {
             for (stage in stageData.getStage() downTo 0) {
-                stageData.getGeneric().getStages()[stage].getItemId()?.let { return it }
+                stageData.getGeneric().getStages()[stage].getAdapterData()?.let { return it }
             }
-            return stageData.getGeneric().getBaseStage().getItemId()!!
+            return stageData.getGeneric().getBaseStage().getAdapterData()!!
         }
 
         /**
@@ -113,6 +116,10 @@ class Utils {
 
         fun isExactBlockLocation(loc1: Location, loc2: Location): Boolean {
             return loc1.blockX == loc2.blockX && loc1.blockY == loc2.blockY && loc1.blockZ == loc2.blockZ
+        }
+
+        fun String.toAdapter(): AdapterData? {
+            return Adapter.getAdapterData(this).getOrNull()
         }
 
     }

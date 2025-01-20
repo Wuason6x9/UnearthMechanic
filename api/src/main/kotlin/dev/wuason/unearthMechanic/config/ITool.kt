@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
+
 
 /**
  * Represents a generic tool with specific attributes and behaviors.
@@ -7,12 +9,13 @@ package dev.wuason.unearthMechanic.config
  * in order to interact properly within the system.
  */
 interface ITool {
+
     /**
-     * Retrieves the unique identifier for the item.
+     * Retrieves adapter data as a string representation.
      *
-     * @return The item's unique identifier as a string.
+     * @return A `String` containing adapter-specific data.
      */
-    fun getItemId(): String
+    fun getAdapterData(): AdapterData
 
     /**
      * Retrieves the size attribute of the tool.

@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.libs.jeffmedia.customblockdata.CustomBlockData
 import dev.wuason.libs.jeffmedia.morepersistentdatatypes.DataType
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
@@ -9,6 +11,7 @@ import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.persistence.PersistentDataContainer
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Represents the data associated with a specific stage of a block at a certain location.
@@ -350,13 +353,9 @@ class StageData(private val location: Location, private val stage: Int, private 
         return generic
     }
 
-    /**
-     * Retrieves the actual item ID associated with the current stage.
-     *
-     * @return the actual item ID
-     */
-    fun getActualItemId(): String {
-        return Utils.getActualItemId(this)
+
+    fun getActualAdapterData(): AdapterData {
+        return Utils.getActualAdapterData(this)
     }
 
     /**

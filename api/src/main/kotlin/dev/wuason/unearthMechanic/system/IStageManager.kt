@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.system.animations.IAnimationManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 
@@ -10,35 +11,22 @@ import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 interface IStageManager {
 
     /**
-     * Retrieves an array of available compatibilities.
-     *
-     * @return An array of `ICompatibility` instances representing the available compatibilities.
-     */
-    fun getCompatibilities(): Array<ICompatibility>
-
-    /**
      * Retrieves a mutable list of loaded compatibility interfaces.
      *
      * @return A MutableList containing instances of ICompatibility that represent the loaded compatibilities.
      */
     fun getCompatibilitiesLoaded(): MutableList<ICompatibility>
 
-    /**
-     * Retrieves the compatibility information associated with the specified adapter ID.
-     *
-     * @param adapterId The unique identifier of the adapter whose compatibility is to be fetched.
-     * @return The ICompatibility instance corresponding to the provided adapter ID, or null if no matching compatibility is found.
-     */
-    fun getCompatibilityByAdapterId(adapterId: String): ICompatibility?
+    fun getCompatibilityByAdapterId(adapterData: AdapterData): ICompatibility?
 
     /**
-     * Checks if the given compatibility is similar to the compatibility associated with the specified adapter ID.
+     * Determines whether the specified adapter data and compatibility object share similar compatibility.
      *
-     * @param adapterId The unique identifier of the adapter.
-     * @param compatibility The compatibility instance to be checked against.
-     * @return `true` if the given compatibility matches the compatibility associated with the adapter ID, `false` otherwise.
+     * @param adapterData The adapter data object that contains information to compare.
+     * @param compatibility The compatibility interface instance to be compared with the adapter data.
+     * @return true if the adapter data and compatibility are similar; false otherwise.
      */
-    fun isSimilarCompatibility(adapterId: String, compatibility: ICompatibility): Boolean
+    fun isSimilarCompatibility(adapterData: AdapterData, compatibility: ICompatibility): Boolean
 
     /**
      * Retrieves the animation manager responsible for handling player animations.

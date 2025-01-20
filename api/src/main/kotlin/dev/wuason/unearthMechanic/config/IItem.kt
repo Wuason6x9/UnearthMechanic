@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
@@ -23,11 +24,13 @@ interface IItem {
      */
     fun getItemStackChance(): ItemStack?
 
+
     /**
-     * Retrieves the unique identifier for the item.
-     * @return the unique item identifier as a String
+     * Retrieves the adapter data associated with this item.
+     *
+     * @return The AdapterData instance containing relevant configuration or characteristics for the adapter.
      */
-    fun getItemId(): String
+    fun getAdapterData(): AdapterData
 
     /**
      * Adds an item to the player's inventory. The item can optionally be added based on a chance.

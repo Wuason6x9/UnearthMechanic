@@ -1,9 +1,10 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 
-class Drop(private val itemId: String, private val amount: String, private val chance: Int) : Item(itemId, amount, chance), IDrop {
+class Drop(private val adapterData: AdapterData, private val amount: String, private val chance: Int) : Item(adapterData, amount, chance), IDrop {
 
     override fun dropItem(loc: Location, applyChance: Boolean): org.bukkit.entity.Item? {
         val item: ItemStack? = if (applyChance) getItemStackChance() else getItemStack()

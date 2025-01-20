@@ -1,17 +1,20 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
-class Tool(private val itemId: String, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val animation: Animation?, private val delay: Long, private val replaceOnBreak: String?): ITool {
+class Tool(private val adapterData: AdapterData, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val animation: Animation?, private val delay: Long, private val replaceOnBreak: String?): ITool {
     companion object {
 
-        fun Tool(itemId: String): Tool {
-            return Tool(itemId, 0, 0, 0, null, null, 0, null)
+        fun Tool(adapterData: AdapterData): Tool {
+            return Tool(adapterData, 0, 0, 0, null, null, 0, null)
         }
 
         fun parseTool(tool: String): Tool {
             val split: List<String> = tool.split(";")
-            if (split.size == 1) return Tool(split[0].trim(), 0, 0, 0, null, null, 0, null)
+            if (split.size == 1) return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), 0, 0, 0, null, null, 0, null)
             var size: Int = 0
             var deep: Int = 0
             var depth: Int = 0
@@ -47,12 +50,12 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
                 if (depth < 1) depth = 1
             }
             val animation: Animation? = if (anim != null) Animation(if (delayAnim > 0) delayAnim else -1, anim!!) else null
-            return Tool(split[0], size, deep, depth, sound, animation, delay, replaceOnBreak)
+            return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), size, deep, depth, sound, animation, delay, replaceOnBreak)
         }
     }
 
-    override fun getItemId(): String {
-        return itemId
+    override fun getAdapterData(): AdapterData {
+        return adapterData
     }
 
     override fun getSize(): Int {
@@ -69,7 +72,7 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
 
     override fun toString(): String {
         val builder: StringBuilder = StringBuilder()
-        builder.append(itemId)
+        builder.append(adapterData.toString())
         if (size > 0) {
             builder.append(";size=${size}")
         }
@@ -99,8 +102,8 @@ class Tool(private val itemId: String, private val size: Int, private val deep: 
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is String) return this.itemId == other
-        if (this.itemId == (other as Tool).itemId) return true
+        if (other is String) return this.adapterData.toString() == other
+        if (other is Tool) return this.adapterData == other.adapterData
         return super.equals(other)
     }
 

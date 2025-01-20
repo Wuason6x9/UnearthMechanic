@@ -6,9 +6,14 @@ import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
 import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterComp
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
+import dev.wuason.unearthMechanic.system.IStageManager
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
@@ -28,12 +33,18 @@ import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
-class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager: StageManager): ICompatibility {
+class ItemsAdderImpl(
+    pluginName: String,
+    private val core: UnearthMechanicPlugin,
+    private val stageManager: StageManager,
+    adapterComp: AdapterComp
+): ICompatibility(
+    pluginName,
+    adapterComp
+) {
 
 
-    override fun onLoad() {
-        Features.registerFeature(UsagesFeature())
-    }
+
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -88,25 +99,9 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         CustomFurniture.remove(entity, false)
     }
 
-    override fun loaded(): Boolean {
-        return Bukkit.getPluginManager().getPlugin("ItemsAdder") != null
-    }
-
-    override fun enabled(): Boolean {
-        return Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")
-    }
-
-    override fun name(): String {
-        return "ItemsAdder"
-    }
-
-    override fun adapterId(): String {
-        return "ia"
-    }
-
     override fun handleStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
@@ -114,28 +109,28 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
         stage: IStage
     ) {
         if (stage is IBlockStage) {
-            handleBlockStage(player, itemId, event, loc, toolUsed, generic, stage)
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
         else if (stage is IFurnitureStage) {
-            handleFurnitureStage(player, itemId, event, loc, toolUsed, generic, stage)
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
     private fun handleBlockStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
         generic: IGeneric,
         stage: IStage
     ) {
-        placeBlock(itemId.replace("ia:", ""), loc)
+        placeBlock(itemAdapterData.id, loc)
     }
 
     private fun handleFurnitureStage(
         player: Player,
-        itemId: String,
+        itemAdapterData: AdapterData,
         event: Event,
         loc: Location,
         toolUsed: ILiveTool,
@@ -144,7 +139,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
     ) {
         if (event is FurnitureInteractEvent) {
             event.furniture?.remove(false)
-            CustomFurniture.spawn(itemId.replace("ia:", ""), loc.block)?.let { customFurniture ->
+            CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
                 val entity: Entity = customFurniture.entity?: return
                 val entityEvent: Entity = event.bukkitEntity
                 entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
@@ -155,7 +150,7 @@ class ItemsAdderImpl(private val core: UnearthMechanic, private val stageManager
             }
         }
         else {
-            CustomFurniture.spawn(itemId.replace("ia:", ""), loc.block)
+            CustomFurniture.spawn(itemAdapterData.id, loc.block)
         }
     }
 

@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import org.bukkit.Location
 import org.bukkit.entity.Player
 
@@ -16,12 +17,13 @@ interface IStage {
      */
     fun getStage(): Int
 
+
     /**
-     * Retrieves the unique identifier for the item associated with the current stage.
+     * Retrieves the adapter data associated with the item ID.
      *
-     * @return the item ID as a String if available; otherwise, null.
+     * @return The AdapterData instance containing configuration or characteristics, or null if not available.
      */
-    fun getItemId(): String?
+    fun getAdapterData(): AdapterData?
 
     /**
      * Retrieves the amount of durability to remove from an item.

@@ -1,19 +1,20 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.mechanics.items.ItemBuilder
 import dev.wuason.mechanics.utils.MathUtils
 import dev.wuason.mechanics.utils.StorageUtils
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
-open class Item(private val itemId: String, private val amount: String, private val chance: Int) : IItem {
+open class Item(private val adapterData: AdapterData, private val amount: String, private val chance: Int) : IItem {
 
     override fun getItemStackChance(): ItemStack? {
-        return if (isDroppable()) ItemBuilder(itemId, getRandAmount()).build() else null
+        return if (isDroppable()) ItemBuilder(adapterData.toString(), getRandAmount()).build() else null
     }
 
     override fun getItemStack(): ItemStack {
-        return ItemBuilder(itemId, getRandAmount()).build()
+        return ItemBuilder(adapterData.toString(), getRandAmount()).build()
     }
 
     private fun isDroppable(): Boolean {
@@ -24,8 +25,8 @@ open class Item(private val itemId: String, private val amount: String, private 
         return MathUtils.randomNumberString(amount)
     }
 
-    override fun getItemId(): String {
-        return itemId
+    override fun getAdapterData(): AdapterData {
+        return adapterData
     }
 
     override fun addItem(player: Player, applyChance: Boolean) {

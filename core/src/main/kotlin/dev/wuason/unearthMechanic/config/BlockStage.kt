@@ -1,8 +1,10 @@
 package dev.wuason.unearthMechanic.config
 
+import dev.wuason.libs.adapter.AdapterData
+
 class BlockStage(
     stage: Int,
-    itemId: String?,
+    adapterData: AdapterData?,
     drops: List<Drop>,
     remove: Boolean,
     removeItemMainHand: Boolean,
@@ -17,7 +19,7 @@ class BlockStage(
     toolAnimDelay: Boolean
 ) : Stage(
     stage,
-    itemId,
+    adapterData,
     drops,
     remove,
     removeItemMainHand,
