@@ -1,5 +1,7 @@
 package dev.wuason.unearthMechanic.system
 
+import dev.wuason.libs.adapter.Adapter
+import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.config.ITool
 import dev.wuason.unearthMechanic.system.animations.IAnimationRunner
 import org.bukkit.entity.Player
@@ -31,5 +33,9 @@ class LiveTool(private var itemMainHand: ItemStack, private val iTool: ITool, pr
             return data.isValid()
         }
         return player.inventory.itemInMainHand == itemMainHand
+    }
+
+    override fun isOriginalItem(): Boolean {
+        return Adapter.getAdapterData(Adapter.getAdapterId(getItemMainHand())).get() == iTool.getAdapterData()
     }
 }

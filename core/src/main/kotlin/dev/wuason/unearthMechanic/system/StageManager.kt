@@ -236,7 +236,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage: Stage,
         validation: Validation? = null
     ) {
-        if ((validation != null && !validation.validate()) || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
+        if ((validation != null && !validation.validate()) || !toolUsed.isOriginalItem() || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
 
         val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
         Bukkit.getPluginManager().callEvent(applyStageEvent)

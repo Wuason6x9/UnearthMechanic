@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system.features
 
+import dev.wuason.libs.adapter.Adapter
 import dev.wuason.mechanics.items.ItemBuilder
 import dev.wuason.mechanics.utils.VersionDetector
 import dev.wuason.mechanics.utils.VersionDetector.ServerVersion

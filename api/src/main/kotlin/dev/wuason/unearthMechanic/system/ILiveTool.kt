@@ -31,4 +31,6 @@ interface ILiveTool {
      * @return true if the tool is in a valid state; false otherwise.
      */
     fun isValid(): Boolean
+
+    fun isOriginalItem(): Boolean
 }
