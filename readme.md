@@ -2,7 +2,7 @@
 
 # -> JavaDoc below <-
 
-[here](https://jitpack.io/com/github/Wuason6x9/UnearthMechanic/0.1.11/javadoc "Go to javadoc")
+[here](https://jitpack.io/com/github/Wuason6x9/UnearthMechanic/0.1.12/javadoc "Go to javadoc")
 
 ## Use api
 

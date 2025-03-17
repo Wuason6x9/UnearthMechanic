@@ -2,6 +2,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.DokkaConfiguration.Visibility
 import java.net.URL
 import org.jetbrains.dokka.Platform
+import java.net.URI
 
 
 plugins {
@@ -17,7 +18,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.11"
+    project.version = "0.1.12"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -47,6 +48,10 @@ allprojects {
         maven("https://repo.nexomc.com/releases/") {
             name = "nexo-releases"
         }
+        maven("https://maven.devs.beer/") {
+            name = "matteodev"
+        }
+        
     }
 
     kotlin {
@@ -54,7 +59,7 @@ allprojects {
     }
 
     dependencies {
-        compileOnly("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
+        compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.0.20")
     }
 
     tasks {
@@ -132,10 +137,11 @@ project(":api") {
 
                 sourceLink {
                     localDirectory.set(file("src/main/kotlin"))
-                    remoteUrl.set(URL("https://github.com/Wuason6x9/UnearthMechanic/tree/master/api/src/main/kotlin/"
-                    ))
+                    remoteUrl.set(URI("https://github.com/Wuason6x9/UnearthMechanic/tree/master/api/src/main/kotlin/"
+                    ).toURL())
                     remoteLineSuffix.set("#L")
                 }
+
 
             }
         }
@@ -160,10 +166,10 @@ project(":core") {
 subprojects {
     dependencies {
         compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
-        compileOnly("com.github.Wuason6x9:mechanics:1.0.2")
-        compileOnly("io.th0rgal:oraxen:1.178.0") // 1.174.0 supported version
-        compileOnly("com.github.LoneDev6:API-ItemsAdder:3.6.3-beta-14")
-        compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT")
+        compileOnly("com.github.Wuason6x9:mechanics:1.0.3.1")
+        compileOnly("io.th0rgal:oraxen:1.189.0") // 1.174.0 supported version
+        compileOnly("dev.lone:api-itemsadder:4.0.2-beta-release-11")
+        compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12-SNAPSHOT")
         compileOnly("com.nexomc:nexo:0.4.0:dev")
     }
 }

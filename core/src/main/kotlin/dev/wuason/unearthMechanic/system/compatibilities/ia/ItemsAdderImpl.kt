@@ -38,12 +38,10 @@ class ItemsAdderImpl(
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
     adapterComp: AdapterComp
-): ICompatibility(
+) : ICompatibility(
     pluginName,
     adapterComp
 ) {
-
-
 
 
     @EventHandler
@@ -62,9 +60,10 @@ class ItemsAdderImpl(
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
         if (event.bukkitEntity != null) {
+            val adapterId = "ia:" + event.namespacedID
             stageManager.interact(
                 event.player,
-                "ia:" + event.namespacedID,
+                adapterId,
                 event.bukkitEntity.location,
                 event,
                 this
@@ -110,8 +109,7 @@ class ItemsAdderImpl(
     ) {
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
-        }
-        else if (stage is IFurnitureStage) {
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
@@ -138,18 +136,17 @@ class ItemsAdderImpl(
         stage: IStage
     ) {
         if (event is FurnitureInteractEvent) {
+            val entityEvent: Entity = event.bukkitEntity
             event.furniture?.remove(false)
             CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                val entity: Entity = customFurniture.entity?: return
-                val entityEvent: Entity = event.bukkitEntity
+                val entity: Entity = customFurniture.entity ?: return
                 entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
 
                 if (entityEvent is ItemFrame && entity is ItemFrame) {
                     entity.rotation = entityEvent.rotation
                 }
             }
-        }
-        else {
+        } else {
             CustomFurniture.spawn(itemAdapterData.id, loc.block)
         }
     }
@@ -180,11 +177,24 @@ class ItemsAdderImpl(
     ): Int {
         if (event is CustomBlockInteractEvent) {
             val block: Block = event.blockClicked
-            return Utils.calculateHashCode(block.location.hashCode(), block.hashCode(), block.type.hashCode(), block.blockData.hashCode(), block.state.hashCode())
+            return Utils.calculateHashCode(
+                block.location.hashCode(),
+                block.hashCode(),
+                block.type.hashCode(),
+                block.blockData.hashCode(),
+                block.state.hashCode()
+            )
         }
         if (event is FurnitureInteractEvent) {
             val entity: Entity = event.bukkitEntity
-            return Utils.calculateHashCode(entity.location.hashCode(), entity.hashCode(), entity.type.hashCode(), entity.uniqueId.hashCode(), entity.isDead.hashCode(), entity.facing.hashCode())
+            return Utils.calculateHashCode(
+                entity.location.hashCode(),
+                entity.hashCode(),
+                entity.type.hashCode(),
+                entity.uniqueId.hashCode(),
+                entity.isDead.hashCode(),
+                entity.facing.hashCode()
+            )
         }
         return -1
     }

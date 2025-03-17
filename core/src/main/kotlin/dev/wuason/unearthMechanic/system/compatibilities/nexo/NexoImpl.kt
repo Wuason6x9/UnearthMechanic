@@ -42,7 +42,7 @@ class NexoImpl(
     adapterComp
 ) {
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractBlock(event: NexoNoteBlockInteractEvent) {
         if (event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
             stageManager.interact(
@@ -55,7 +55,7 @@ class NexoImpl(
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractBlock(event: NexoStringBlockInteractEvent) {
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
@@ -68,7 +68,7 @@ class NexoImpl(
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractFurniture(event: NexoFurnitureInteractEvent) {
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(

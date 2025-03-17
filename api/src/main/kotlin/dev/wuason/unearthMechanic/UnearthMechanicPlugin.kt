@@ -3,6 +3,7 @@ package dev.wuason.unearthMechanic
 import dev.wuason.mechanics.mechanics.MechanicAddon
 import dev.wuason.unearthMechanic.config.IConfigManager
 import dev.wuason.unearthMechanic.system.IStageManager
+import org.bukkit.inventory.ItemStack
 
 /**
  * UnearthMechanicPlugin serves as an abstract base class for managing core components
@@ -33,6 +34,7 @@ abstract class UnearthMechanicPlugin : MechanicAddon(23153) {
 
     init {
         this.also { instance = it }
+        val item: ItemStack? = null
     }
 
     /**

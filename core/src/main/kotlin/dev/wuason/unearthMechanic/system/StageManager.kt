@@ -106,7 +106,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         if (!stageData.getGeneric().existsTool(toolUsed)) return
 
-        if (stageData.getActualAdapterData().adapter != toolUsed.adapter) return
+        if (stageData.getActualAdapterData().adapter != compatibility.adapterComp()) return
 
         if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
 
@@ -178,6 +178,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
             animator.playAnimation(player, toolUsed.getITool().getAnimation()!!)
         }
 
+
         Features.getFeatures().forEach { feature ->
             try {
                 feature.onPreApply(player, compatibility, event, loc, toolUsed, stage, generic)
@@ -199,6 +200,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         } else {
             onApplyStage(player, compatibility, event, loc, toolUsed, generic, stage)
         }
+
     }
 
     fun onProcessStage(
@@ -237,7 +239,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         validation: Validation? = null
     ) {
         if ((validation != null && !validation.validate()) || !toolUsed.isOriginalItem() || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
-
         val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
         Bukkit.getPluginManager().callEvent(applyStageEvent)
         if (applyStageEvent.isCancelled) return
@@ -270,6 +271,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 c.handleStage(player, it, event, loc, toolUsed, generic, stage)
             }
         }
+
 
         if (stage.isRemove() || generic.isLastStage(stage)) {
             if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)

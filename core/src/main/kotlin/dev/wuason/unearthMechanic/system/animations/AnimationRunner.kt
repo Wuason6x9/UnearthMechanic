@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system.animations
 
+import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.jeffmedia.morepersistentdatatypes.DataType
 import dev.wuason.mechanics.items.ItemBuilder
 import dev.wuason.mechanics.utils.StorageUtils

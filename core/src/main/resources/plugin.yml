@@ -12,7 +12,7 @@ softdepend:
   - WorldGuard
   - Nexo
 libraries:
-  - "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
+  - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
 permissions:
   unearthMechanic.bypass:
     description: Allows the player to bypass the UnearthMechanic
