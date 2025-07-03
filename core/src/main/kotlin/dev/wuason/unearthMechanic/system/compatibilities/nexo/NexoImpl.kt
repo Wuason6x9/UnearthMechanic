@@ -32,11 +32,15 @@ import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
+import java.util.concurrent.ConcurrentHashMap
+
 class NexoImpl(
     pluginName: String,
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
-    adapterComp: AdapterComp
+    adapterComp: AdapterComp,
+
+    private val locks: MutableMap<String, Any> = ConcurrentHashMap()
 ): ICompatibility(
     pluginName,
     adapterComp
@@ -161,12 +165,27 @@ class NexoImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        if (event is NexoFurnitureInteractEvent) {
-            breakFurniture(event.baseEntity, player, event.mechanic.itemID)
-            placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
-        } else {
-            placeFurniture(itemAdapterData, loc)
+        val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
+        val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
+
+        synchronized(mutex) {
+
+            if (event is NexoFurnitureInteractEvent) {
+                val entity = event.baseEntity
+
+                // Verify that the entity is not already processed.
+                if (!entity.isValid || entity.isDead) return
+
+                // Safely removes furniture
+                breakFurniture(event.baseEntity, player, event.mechanic.itemID)
+
+                // Replaces
+                placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
+            } else {
+                placeFurniture(itemAdapterData, loc)
+            }
         }
+        locks.remove(key)
     }
 
     override fun handleRemove(

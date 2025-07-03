@@ -33,11 +33,15 @@ import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
+import java.util.concurrent.ConcurrentHashMap
+
 class ItemsAdderImpl(
     pluginName: String,
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
-    adapterComp: AdapterComp
+    adapterComp: AdapterComp,
+
+    private val locks: MutableMap<String, Any> = ConcurrentHashMap()
 ) : ICompatibility(
     pluginName,
     adapterComp
@@ -135,20 +139,34 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        if (event is FurnitureInteractEvent) {
-            val entityEvent: Entity = event.bukkitEntity
-            event.furniture?.remove(false)
-            CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                val entity: Entity = customFurniture.entity ?: return
-                entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
+        val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
+        val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
 
-                if (entityEvent is ItemFrame && entity is ItemFrame) {
-                    entity.rotation = entityEvent.rotation
+        synchronized(mutex) {
+            if (event is FurnitureInteractEvent) {
+                val entityEvent: Entity = event.bukkitEntity
+
+                // Prevent duplication: ensure that the entity has not been deleted
+                if (!entityEvent.isValid || entityEvent.isDead) return
+
+                // Cancel automatic drop (just in case)
+                event.furniture?.remove(false)
+
+                // Spawn of the new furniture
+                CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
+                    val entity: Entity = customFurniture.entity ?: return
+                    entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
+
+                    if (entityEvent is ItemFrame && entity is ItemFrame) {
+                        entity.rotation = entityEvent.rotation
+                    }
                 }
+            } else {
+                CustomFurniture.spawn(itemAdapterData.id, loc.block)
             }
-        } else {
-            CustomFurniture.spawn(itemAdapterData.id, loc.block)
         }
+
+        locks.remove(key)
     }
 
     override fun handleRemove(
