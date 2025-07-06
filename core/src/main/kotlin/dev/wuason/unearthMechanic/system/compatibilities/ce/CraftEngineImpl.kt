@@ -1,11 +1,7 @@
-package dev.wuason.unearthMechanic.system.compatibilities.ia
+package dev.wuason.unearthMechanic.system.compatibilities.ce
 
 import dev.lone.itemsadder.api.CustomBlock
 import dev.lone.itemsadder.api.CustomFurniture
-import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
-import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
-import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
-import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -19,6 +15,14 @@ import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.system.features.Features
 import dev.wuason.unearthMechanic.utils.Utils
+import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks
+import net.momirealms.craftengine.bukkit.api.CraftEngineFurniture
+import net.momirealms.craftengine.bukkit.api.event.CustomBlockBreakEvent
+import net.momirealms.craftengine.bukkit.api.event.CustomBlockInteractEvent
+import net.momirealms.craftengine.bukkit.api.event.FurnitureBreakEvent
+import net.momirealms.craftengine.bukkit.api.event.FurnitureInteractEvent
+import net.momirealms.craftengine.core.entity.player.InteractionHand
+import net.momirealms.craftengine.libraries.nbt.CompoundTag
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
@@ -34,8 +38,10 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
 import java.util.concurrent.ConcurrentHashMap
+import net.momirealms.craftengine.core.util.Key
+import net.momirealms.craftengine.core.entity.furniture.AnchorType
 
-class ItemsAdderImpl(
+class CraftEngineImpl(
     pluginName: String,
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
@@ -50,43 +56,33 @@ class ItemsAdderImpl(
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
-        if (event.action == Action.RIGHT_CLICK_BLOCK && event.hand == EquipmentSlot.HAND) {
-            stageManager.interact(
-                event.player,
-                "ia:" + event.namespacedID,
-                event.blockClicked.location,
-                event,
-                this
-            )
-        }
+        if (event.hand() != InteractionHand.MAIN_HAND) return
+        val id = event.customBlock().id().toString()
+
+        stageManager.interact(event.player(), "ce:$id", event.location(), event, this)
+
     }
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        if (event.bukkitEntity != null) {
-            val adapterId = "ia:" + event.namespacedID
-            stageManager.interact(
-                event.player,
-                adapterId,
-                event.bukkitEntity.location,
-                event,
-                this
-            )
-        }
+        if (event.hand() != InteractionHand.MAIN_HAND) return
+        val id = event.furniture().id().toString()
+
+        stageManager.interact(event.player(), "ce:$id", event.location(), event, this)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onBlockBreak(event: CustomBlockBreakEvent) {
-        StageData.removeStageData(event.block)
+        StageData.removeStageData(event.bukkitBlock())
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        StageData.removeStageData(event.bukkitEntity.location)
+        StageData.removeStageData(event.location())
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
-        CustomBlock.place(adapterId.replace("ia:", ""), location)
+        CustomBlock.place(adapterId.replace("ce:", ""), location)
     }
 
     private fun breakBlock(location: Location?) {
@@ -95,7 +91,7 @@ class ItemsAdderImpl(
 
     private fun replaceFurniture(adapterId: String, entity: Entity?) {
         val customFurniture = CustomFurniture.byAlreadySpawned(entity)
-        customFurniture!!.replaceFurniture(adapterId.replace("ia:", ""))
+        customFurniture!!.replaceFurniture(adapterId.replace("ce:", ""))
     }
 
     private fun breakFurniture(entity: Entity?, player: Player?) {
@@ -133,7 +129,13 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        placeBlock(itemAdapterData.id, loc)
+        CraftEngineBlocks.place(
+            loc,
+            Key.of(itemAdapterData.id.removePrefix("ce:")),
+            CompoundTag(),
+            true
+        )
+        //placeBlock(itemAdapterData.id, loc)
     }
 
     private fun handleFurnitureStage(
@@ -152,25 +154,38 @@ class ItemsAdderImpl(
             if (event is FurnitureInteractEvent) {
                 event.isCancelled = true
 
-                val entityEvent: Entity = event.bukkitEntity
+                val entityEvent: Entity = event.furniture().baseEntity()
 
-                // Prevent duplication: ensure that the entity has not been deleted
                 if (!entityEvent.isValid || entityEvent.isDead) return
 
                 // Cancel automatic drop (just in case)
-                event.furniture?.remove(false)
+                CraftEngineFurniture.remove(event.furniture().baseEntity())
 
                 // Spawn of the new furniture
-                CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                    val entity: Entity = customFurniture.entity ?: return
-                    entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
+                val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+                val furniture = CraftEngineFurniture.byId(furnitureId)
+                val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
 
-                    if (entityEvent is ItemFrame && entity is ItemFrame) {
-                        entity.rotation = entityEvent.rotation
+                CraftEngineFurniture.place(loc,
+                    furnitureId,
+                    anchor,
+                    true)?.let { customFurniture ->
+
+                    val entity: Entity = customFurniture.baseEntity() ?: return
+                    entity.setRotation(entity.location.yaw, entity.location.pitch)
+                    if (entity is ItemFrame && entity is ItemFrame) {
+                        entity.rotation = entity.rotation
                     }
                 }
-            } else {
-                CustomFurniture.spawn(itemAdapterData.id, loc.block)
+            }else{
+                val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+                val furniture = CraftEngineFurniture.byId(furnitureId)
+                val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+
+                CraftEngineFurniture.place(loc,
+                    furnitureId,
+                    anchor,
+                    true)
             }
         }
 
@@ -186,10 +201,14 @@ class ItemsAdderImpl(
         stage: IStage
     ) {
         if (event is CustomBlockInteractEvent) {
-            breakBlock(loc)
+            //breakBlock(loc)
+            CraftEngineBlocks.remove(event.bukkitBlock())
         }
         if (event is FurnitureInteractEvent) {
-            event.furniture?.remove(false)
+            CraftEngineFurniture.remove(event.furniture().baseEntity())
+        }
+        if (event is FurnitureBreakEvent) {
+            CraftEngineFurniture.remove(event.furniture().baseEntity())
         }
     }
 
@@ -202,7 +221,7 @@ class ItemsAdderImpl(
         stage: Int
     ): Int {
         if (event is CustomBlockInteractEvent) {
-            val block: Block = event.blockClicked
+            val block: Block = event.bukkitBlock()
             return Utils.calculateHashCode(
                 block.location.hashCode(),
                 block.hashCode(),
@@ -212,7 +231,7 @@ class ItemsAdderImpl(
             )
         }
         if (event is FurnitureInteractEvent) {
-            val entity: Entity = event.bukkitEntity
+            val entity: Entity = event.furniture().baseEntity()
             return Utils.calculateHashCode(
                 entity.location.hashCode(),
                 entity.hashCode(),
@@ -227,14 +246,14 @@ class ItemsAdderImpl(
 
     override fun getItemHand(event: Event): ItemStack? {
         if (event is CustomBlockInteractEvent) {
-            return event.item
+            return event.item()
         }
         return null
     }
 
     override fun getBlockFace(event: Event): BlockFace? {
         if (event is CustomBlockInteractEvent) {
-            return event.blockFace
+            return event.clickedFace()
         }
         return null
     }

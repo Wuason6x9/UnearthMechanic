@@ -13,6 +13,7 @@ import dev.wuason.unearthMechanic.system.animations.IAnimationManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.system.compatibilities.ia.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.MinecraftImpl
+import dev.wuason.unearthMechanic.system.compatibilities.ce.CraftEngineImpl
 import dev.wuason.unearthMechanic.system.compatibilities.nexo.NexoImpl
 import dev.wuason.unearthMechanic.system.compatibilities.or.OraxenImpl
 import dev.wuason.unearthMechanic.system.features.BasicFeatures
@@ -66,6 +67,10 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         compCreator("Nexo") { pluginName ->
             NexoImpl(pluginName, core, this, Adapter.getAdapterByName(pluginName))
+        } ?.let { compatibilitiesLoaded.add(it) }
+
+        compCreator("CraftEngine") { pluginName ->
+            CraftEngineImpl(pluginName, core, this, Adapter.getAdapterByName(pluginName))
         } ?.let { compatibilitiesLoaded.add(it) }
 
         compatibilitiesLoaded.forEach { compatibility ->

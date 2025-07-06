@@ -171,6 +171,8 @@ class NexoImpl(
         synchronized(mutex) {
 
             if (event is NexoFurnitureInteractEvent) {
+                event.isCancelled = true
+
                 val entity = event.baseEntity
 
                 // Verify that the entity is not already processed.

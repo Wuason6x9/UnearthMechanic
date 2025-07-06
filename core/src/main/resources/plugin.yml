@@ -11,6 +11,7 @@ softdepend:
   - Oraxen
   - WorldGuard
   - Nexo
+  - CraftEngine
 libraries:
   - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
 permissions:
