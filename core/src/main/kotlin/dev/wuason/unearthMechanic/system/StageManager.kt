@@ -313,16 +313,19 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage.getAdapterData()?.let {
             if (isSimilarCompatibility(it, compatibility)) {
 
+                compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
                 if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
                     compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
                 }
-                compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
 
             } else {
                 val c: ICompatibility =
                     getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
-                compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+
                 c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+
+                compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+
             }
         }
 

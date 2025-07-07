@@ -19,6 +19,7 @@ import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.system.features.Features
 import dev.wuason.unearthMechanic.utils.Utils
+import net.momirealms.craftengine.core.util.Cancellable
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
@@ -45,7 +46,52 @@ class ItemsAdderImpl(
     pluginName,
     adapterComp
 ) {
-    private val pendingLocations = ConcurrentHashMap.newKeySet<String>()
+    private enum class BlockState { NONE, PENDING_REPLACE, REMOVED }
+
+    private val blockStates = ConcurrentHashMap<String, Pair<BlockState, Long>>()
+
+    private fun generateKey(loc: Location): String =
+        "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
+
+    init {
+        Bukkit.getScheduler().runTaskTimer(core, Runnable {
+            processQueue()
+        }, 20L, 20L)
+    }
+
+    private fun processQueue() {
+        val now = Bukkit.getServer().currentTick.toLong()
+        val toRemove = mutableListOf<String>()
+
+        for ((key, value) in blockStates.entries) {
+            val (state, tick) = value
+            if (now - tick > 10L) {
+                if (state == BlockState.PENDING_REPLACE) {
+                    locationFromKey(key)?.let { loc ->
+                        loc.world.getNearbyEntities(loc, 0.5, 0.5, 0.5).forEach { e ->
+                            if (CustomFurniture.byAlreadySpawned(e) != null) {
+                                CustomFurniture.remove(e, false)
+                                Bukkit.getConsoleSender().sendMessage("[UnearthMechanic] Cleaned leftover at $key")
+                            }
+                        }
+                    }
+                }
+                toRemove.add(key)
+            }
+        }
+
+        toRemove.forEach { blockStates.remove(it) }
+    }
+
+    private fun locationFromKey(key: String): Location? {
+        val parts = key.split(",")
+        if (parts.size != 4) return null
+        val x = parts[0].toIntOrNull() ?: return null
+        val y = parts[1].toIntOrNull() ?: return null
+        val z = parts[2].toIntOrNull() ?: return null
+        val world = Bukkit.getWorld(parts[3]) ?: return null
+        return Location(world, x.toDouble(), y.toDouble(), z.toDouble())
+    }
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -110,6 +156,7 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
@@ -138,34 +185,38 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
-        if (!pendingLocations.add(key)) return
+        val key = generateKey(loc)
+        val block = loc.block
+        val currentTick = Bukkit.getServer().currentTick.toLong()
 
-        Bukkit.getScheduler().runTask(core, Runnable {
-            try {
-                if (event is FurnitureInteractEvent) {
-                    event.isCancelled = true
-                    val entityEvent: Entity = event.bukkitEntity
-                    if (!entityEvent.isValid || entityEvent.isDead) return@Runnable
+        if (event is FurnitureInteractEvent) {
+            //event.isCancelled = true
+            val entity = event.bukkitEntity
+            blockStates[key] = BlockState.PENDING_REPLACE to currentTick
 
-                    event.furniture?.remove(false)
+            // Remove existing furniture
+            event.furniture?.remove(false)
+            player.sendMessage("[UnearthMechanic] [$key] Furniture removed")
 
-                    CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                        val entity: Entity = customFurniture.entity ?: return@let
-                        entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
-                        if (entityEvent is ItemFrame && entity is ItemFrame) {
-                            entity.rotation = entityEvent.rotation
+            // Postpone spawn one tick to avoid conflicts with possible simultaneous breaks.
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                if (blockStates[key]?.first == BlockState.PENDING_REPLACE) {
+                    CustomFurniture.spawn(itemAdapterData.id, block)?.entity?.let { newEntity ->
+                        newEntity.setRotation(entity.location.yaw, entity.location.pitch)
+                        if (entity is ItemFrame && newEntity is ItemFrame) {
+                            newEntity.rotation = entity.rotation
                         }
                     }
-                } else {
-                    CustomFurniture.spawn(itemAdapterData.id, loc.block)
                 }
-            } finally {
-                Bukkit.getScheduler().runTaskLater(core, Runnable {
-                    pendingLocations.remove(key)
-                }, 1L)
-            }
-        })
+                blockStates.remove(key)
+                player.sendMessage("[UnearthMechanic] [$key] State cleared")
+                player.sendMessage("------------------------------------------------")
+            }, 1L)
+        } else {
+            player.sendMessage("[UnearthMechanic] [$key] No furniture event, direct spawn")
+            // Direct spawn in case of no furniture event
+            CustomFurniture.spawn(itemAdapterData.id, block)
+        }
     }
 
     override fun handleRemove(
@@ -176,12 +227,23 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        val key = generateKey(loc)
+        //if (blockStates[key]?.first == BlockState.PENDING_REPLACE) return
+        if (blockStates[key]?.first == BlockState.PENDING_REPLACE) {
+            Bukkit.getConsoleSender().sendMessage("[UnearthMechanic] [$key] Remove skipped due to PENDING_REPLACE")
+            return
+        }
+
         if (event is CustomBlockInteractEvent) {
             breakBlock(loc)
         }
         if (event is FurnitureInteractEvent) {
             event.furniture?.remove(false)
+            Bukkit.getConsoleSender().sendMessage("[UnearthMechanic] [$key] Furniture removed on break")
         }
+
+        blockStates[key] = BlockState.REMOVED to Bukkit.getServer().currentTick.toLong()
+        Bukkit.getConsoleSender().sendMessage("[UnearthMechanic] [$key] Set to REMOVED")
     }
 
     override fun hashCode(
