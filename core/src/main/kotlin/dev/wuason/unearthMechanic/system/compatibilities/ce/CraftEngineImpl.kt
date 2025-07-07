@@ -46,8 +46,6 @@ class CraftEngineImpl(
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
     adapterComp: AdapterComp,
-
-    private val locks: MutableMap<String, Any> = ConcurrentHashMap()
 ) : ICompatibility(
     pluginName,
     adapterComp
@@ -57,18 +55,26 @@ class CraftEngineImpl(
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
         if (event.hand() != InteractionHand.MAIN_HAND) return
-        val id = event.customBlock().id().toString()
+        val adapterId = "ce:" + event.customBlock().id().toString()
 
-        stageManager.interact(event.player(), "ce:$id", event.location(), event, this)
-
+        stageManager.interact(event.player(),
+            adapterId,
+            event.location(),
+            event,
+            this)
     }
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        if (event.hand() != InteractionHand.MAIN_HAND) return
-        val id = event.furniture().id().toString()
-
-        stageManager.interact(event.player(), "ce:$id", event.location(), event, this)
+        if (event.furniture().baseEntity() != null) {
+            val adapterId = "ce:" + event.furniture().id()
+            stageManager.interact(
+                event.player,
+                adapterId,
+                event.location(),
+                event,
+                this)
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -110,13 +116,7 @@ class CraftEngineImpl(
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
-            val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
-            val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
-
-            synchronized(mutex) {
-                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
-            }
-            locks.remove(key)
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
@@ -148,48 +148,43 @@ class CraftEngineImpl(
         stage: IStage
     ) {
         val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
-        val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
 
-        synchronized(mutex) {
-            if (event is FurnitureInteractEvent) {
-                event.isCancelled = true
+        if (event is FurnitureInteractEvent) {
+            event.isCancelled = true
 
-                val entityEvent: Entity = event.furniture().baseEntity()
+            val entityEvent: Entity = event.furniture().baseEntity()
 
-                if (!entityEvent.isValid || entityEvent.isDead) return
+            if (!entityEvent.isValid || entityEvent.isDead) return
 
-                // Cancel automatic drop (just in case)
-                CraftEngineFurniture.remove(event.furniture().baseEntity())
+            // Cancel automatic drop (just in case)
+            CraftEngineFurniture.remove(event.furniture().baseEntity())
 
-                // Spawn of the new furniture
-                val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
-                val furniture = CraftEngineFurniture.byId(furnitureId)
-                val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+            // Spawn of the new furniture
+            val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+            val furniture = CraftEngineFurniture.byId(furnitureId)
+            val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
 
-                CraftEngineFurniture.place(loc,
-                    furnitureId,
-                    anchor,
-                    true)?.let { customFurniture ->
+            CraftEngineFurniture.place(loc,
+                furnitureId,
+                anchor,
+                true)?.let { customFurniture ->
 
-                    val entity: Entity = customFurniture.baseEntity() ?: return
-                    entity.setRotation(entity.location.yaw, entity.location.pitch)
-                    if (entity is ItemFrame && entity is ItemFrame) {
-                        entity.rotation = entity.rotation
-                    }
+                val entity: Entity = customFurniture.baseEntity() ?: return
+                entity.setRotation(entity.location.yaw, entity.location.pitch)
+                if (entity is ItemFrame && entity is ItemFrame) {
+                    entity.rotation = entity.rotation
                 }
-            }else{
-                val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
-                val furniture = CraftEngineFurniture.byId(furnitureId)
-                val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
-
-                CraftEngineFurniture.place(loc,
-                    furnitureId,
-                    anchor,
-                    true)
             }
-        }
+        }else{
+            val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+            val furniture = CraftEngineFurniture.byId(furnitureId)
+            val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
 
-        locks.remove(key)
+            CraftEngineFurniture.place(loc,
+                furnitureId,
+                anchor,
+                true)
+        }
     }
 
     override fun handleRemove(

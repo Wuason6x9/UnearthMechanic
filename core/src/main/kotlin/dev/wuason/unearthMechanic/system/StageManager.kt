@@ -3,7 +3,9 @@ package dev.wuason.unearthMechanic.system
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.libs.protectionlib.ProtectionLib
+import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.compatibilities.WorldGuardComp
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.events.ApplyStageEvent
@@ -11,9 +13,9 @@ import dev.wuason.unearthMechanic.events.PreApplyStageEvent
 import dev.wuason.unearthMechanic.system.animations.AnimationManager
 import dev.wuason.unearthMechanic.system.animations.IAnimationManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import dev.wuason.unearthMechanic.system.compatibilities.ia.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.MinecraftImpl
 import dev.wuason.unearthMechanic.system.compatibilities.ce.CraftEngineImpl
+import dev.wuason.unearthMechanic.system.compatibilities.ia.ItemsAdderImpl
 import dev.wuason.unearthMechanic.system.compatibilities.nexo.NexoImpl
 import dev.wuason.unearthMechanic.system.compatibilities.or.OraxenImpl
 import dev.wuason.unearthMechanic.system.features.BasicFeatures
@@ -34,8 +36,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.scheduler.BukkitTask
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.jvm.optionals.getOrNull
+
 
 class StageManager(private val core: UnearthMechanic) : IStageManager {
 
@@ -81,8 +82,14 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     fun interact(player: Player, baseItemId: String, location: Location, event: Event, compatibility: ICompatibility) {
         if (player.isSneaking) return
+
+        //player.sendMessage("el permiso es "+player.hasPermission("unearthMechanic.bypass"))
+        //player.sendMessage("ProtectionLib es "+ProtectionLib.canInteract(player, location))
+        //player.sendMessage("worldguard es "+WorldGuardPlugin.isWorldGuardEnabled())
+
         if (StageData.hasStageData(location)) {
             val stageData: StageData = StageData.fromLoc(location) ?: return
+            //Bukkit.getConsoleSender().sendMessage("el stagedata es "+stageData.getGeneric().isNotProtect())
             val toolUsed: String = Adapter.getAdapterId(
                 animator.getAnimation(player)?.getItemMainHand() ?: player.inventory.itemInMainHand
             )
@@ -113,7 +120,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         if (stageData.getActualAdapterData().adapter != compatibility.adapterComp()) return
 
-        if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !stageData.getGeneric().isNotProtect()) {
+        if (canInteractExist(player, location, stageData, core)) {
 
             val iTool: ITool = stageData.getGeneric().getTool(toolUsed) ?: throw NullPointerException(
                 "Tool not found for $toolUsed in ${
@@ -136,6 +143,27 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
+    fun canInteractExist(
+        player: Player,
+        location: Location,
+        stageData: StageData,
+        core: UnearthMechanic
+    ): Boolean {
+        val generic = stageData.getGeneric()
+
+        return player.isOp
+                || player.hasPermission("unearthMechanic.bypass")
+                || generic.isNotProtect()
+                || (
+                !WorldGuardPlugin.isWorldGuardEnabled() && ProtectionLib.canInteract(player, location)
+                )
+                || (
+                WorldGuardPlugin.isWorldGuardEnabled()
+                        && ProtectionLib.canInteract(player, location)
+                        && core.getWorldGuardComp().canInteractCustom(player, location)
+                )
+    }
+
     private fun interactNotExist(
         player: Player,
         baseAdapterData: AdapterData,
@@ -147,7 +175,9 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         if (!core.getConfigManager().validTool(baseAdapterData, toolUsed)) return
         val generic: IGeneric = core.getConfigManager().getGeneric(baseAdapterData, toolUsed) ?: return
 
-        if (player.isOp || player.hasPermission("unearthMechanic.bypass") || ((ProtectionLib.canInteract(player, location) && !WorldGuardPlugin.isWorldGuardEnabled()) || (WorldGuardPlugin.isWorldGuardEnabled() && (ProtectionLib.canInteract(player, location) && core.getWorldGuardComp().canInteractCustom(player, location)))) && !generic.isNotProtect()) {
+        //Bukkit.getConsoleSender().sendMessage("No existe StageData y es "+ generic.isNotProtect())
+
+        if (canInteractNotExist(player, location, generic, core)) {
 
             val iTool: ITool = generic.getTool(toolUsed)
                 ?: throw NullPointerException("Tool not found for $toolUsed in ${generic.getId()} mabye is duplicated config")
@@ -159,6 +189,25 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 onPreApplyStage(player, compatibility, event, location, liveTool, generic, stage)
             }
         }
+    }
+
+    fun canInteractNotExist(
+        player: Player,
+        location: Location,
+        generic: IGeneric,
+        core: UnearthMechanic
+    ): Boolean {
+        return player.isOp
+                || player.hasPermission("unearthMechanic.bypass")
+                || generic.isNotProtect()
+                || (
+                !WorldGuardPlugin.isWorldGuardEnabled() && ProtectionLib.canInteract(player, location)
+                )
+                || (
+                WorldGuardPlugin.isWorldGuardEnabled()
+                        && ProtectionLib.canInteract(player, location)
+                        && core.getWorldGuardComp().canInteractCustom(player, location)
+                )
     }
 
     private fun onPreApplyStage(

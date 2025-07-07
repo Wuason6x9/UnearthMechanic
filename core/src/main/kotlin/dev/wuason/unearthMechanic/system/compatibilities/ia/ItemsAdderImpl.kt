@@ -32,6 +32,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import org.bukkit.scheduler.BukkitScheduler
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -40,13 +41,11 @@ class ItemsAdderImpl(
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
     adapterComp: AdapterComp,
-
-    private val locks: MutableMap<String, Any> = ConcurrentHashMap()
 ) : ICompatibility(
     pluginName,
     adapterComp
 ) {
-
+    private val pendingLocations = ConcurrentHashMap.newKeySet<String>()
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -114,13 +113,7 @@ class ItemsAdderImpl(
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
-            val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
-            val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
-
-            synchronized(mutex) {
-                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
-            }
-            locks.remove(key)
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
@@ -146,35 +139,33 @@ class ItemsAdderImpl(
         stage: IStage
     ) {
         val key = "${loc.blockX},${loc.blockY},${loc.blockZ},${loc.world?.name}"
-        val mutex = locks.computeIfAbsent(key) { _: String -> Any() }
+        if (!pendingLocations.add(key)) return
 
-        synchronized(mutex) {
-            if (event is FurnitureInteractEvent) {
-                event.isCancelled = true
+        Bukkit.getScheduler().runTask(core, Runnable {
+            try {
+                if (event is FurnitureInteractEvent) {
+                    event.isCancelled = true
+                    val entityEvent: Entity = event.bukkitEntity
+                    if (!entityEvent.isValid || entityEvent.isDead) return@Runnable
 
-                val entityEvent: Entity = event.bukkitEntity
+                    event.furniture?.remove(false)
 
-                // Prevent duplication: ensure that the entity has not been deleted
-                if (!entityEvent.isValid || entityEvent.isDead) return
-
-                // Cancel automatic drop (just in case)
-                event.furniture?.remove(false)
-
-                // Spawn of the new furniture
-                CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                    val entity: Entity = customFurniture.entity ?: return
-                    entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
-
-                    if (entityEvent is ItemFrame && entity is ItemFrame) {
-                        entity.rotation = entityEvent.rotation
+                    CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
+                        val entity: Entity = customFurniture.entity ?: return@let
+                        entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
+                        if (entityEvent is ItemFrame && entity is ItemFrame) {
+                            entity.rotation = entityEvent.rotation
+                        }
                     }
+                } else {
+                    CustomFurniture.spawn(itemAdapterData.id, loc.block)
                 }
-            } else {
-                CustomFurniture.spawn(itemAdapterData.id, loc.block)
+            } finally {
+                Bukkit.getScheduler().runTaskLater(core, Runnable {
+                    pendingLocations.remove(key)
+                }, 1L)
             }
-        }
-
-        locks.remove(key)
+        })
     }
 
     override fun handleRemove(

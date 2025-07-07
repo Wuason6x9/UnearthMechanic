@@ -15,7 +15,8 @@ class UnearthMechanic : UnearthMechanicPlugin() {
         val COMPATIBILITIES: Array<String> = arrayOf(
             "ItemsAdder",
             "Oraxen",
-            "Nexo"
+            "Nexo",
+            "CraftEngine"
         )
 
         private lateinit var instance: UnearthMechanic
