@@ -54,6 +54,44 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     private val animator: AnimationManager = AnimationManager(core)
 
+    private val recentRemovals = mutableMapOf<Location, Long>()
+    private val removalWindowTicks = 2L
+
+    fun markRemoval(loc: Location) {
+        recentRemovals[loc.clone()] = Bukkit.getCurrentTick().toLong()
+        Bukkit.getConsoleSender().sendMessage("[UM] REMOVAL marcada en ${loc.blockX},${loc.blockY},${loc.blockZ}")
+    }
+
+    private fun shouldSkipStageDueToRecentRemoval(loc: Location): Boolean {
+        val last = recentRemovals[loc.clone()]
+        val current = Bukkit.getCurrentTick().toLong()
+
+        if (last != null) {
+            val diff = current - last
+            Bukkit.getConsoleSender().sendMessage("[DEBUG] Evaluando remoción reciente en $loc")
+            Bukkit.getConsoleSender().sendMessage("[DEBUG] TICK ACTUAL: $current | Última remoción: $last | Diff: $diff")
+
+            if (diff <= removalWindowTicks) {
+                Bukkit.getConsoleSender().sendMessage("[UM] SKIP STAGE en $loc por REMOVAL reciente")
+                return true
+            }
+        }
+        return false
+    }
+
+    private val runningStages = mutableSetOf<Location>()
+
+    private fun runStageSafe(loc: Location, task: Runnable) {
+        if (!runningStages.add(loc.clone())) return  // there was already a pending execution
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            try {
+                task.run()
+            } finally {
+                runningStages.remove(loc.clone())
+            }
+        }, 3L)
+    }
+
     init {
 
         compatibilitiesLoaded.add(MinecraftImpl("Vanilla", core, this, Adapter.getAdapterByName("Vanilla")))
@@ -219,6 +257,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         generic: IGeneric,
         stage: Stage
     ) {
+        if (shouldSkipStageDueToRecentRemoval(loc.clone())) return //This stops the stage if it broke.
         //send event
         val eventStage: PreApplyStageEvent =
             PreApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
@@ -281,7 +320,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
-
     private fun onApplyStage(
         player: Player,
         compatibility: ICompatibility,
@@ -292,7 +330,18 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage: Stage,
         validation: Validation? = null
     ) {
+        val currentTick = Bukkit.getCurrentTick().toLong()
+        val lastRemoval = recentRemovals[loc]
+        if (lastRemoval != null && currentTick <= lastRemoval) {
+            Bukkit.getConsoleSender().sendMessage("[UM] onApplyStage RETRASADO: remoción es en mismo tick $currentTick")
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                onApplyStage(player, compatibility, event, loc, toolUsed, generic, stage, validation)
+            }, 1L)
+            return
+        }
+
         if ((validation != null && !validation.validate()) || !toolUsed.isOriginalItem() || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
+
         val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
         Bukkit.getPluginManager().callEvent(applyStageEvent)
         if (applyStageEvent.isCancelled) return
@@ -314,16 +363,44 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
             if (isSimilarCompatibility(it, compatibility)) {
 
                 if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
-                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    val needsRemoval = !generic.getBackStage(stage).javaClass.isInstance(stage)
+                    if (needsRemoval) {
+                        markRemoval(loc)
+                        compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    }
+                    //compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
                 }
-                compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+
+                runStageSafe(loc) {
+                    Bukkit.getConsoleSender().sendMessage("[UM] Ejecutando runStageSafe en ${Bukkit.getCurrentTick()}")
+                    Bukkit.getScheduler().runTaskLater(core, Runnable {
+                        if (shouldSkipStageDueToRecentRemoval(loc)) return@Runnable
+                        Bukkit.getConsoleSender().sendMessage("[UM] handleStage (con delay) en $loc, stage ${stage.getStage()}")
+                        compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                    }, 2L)
+                }
+
+                //compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
 
             } else {
                 val c: ICompatibility =
                     getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
 
-                compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                val needsRemoval = !generic.getBackStage(stage).javaClass.isInstance(stage)
+                if (needsRemoval) {
+                    markRemoval(loc)
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                }
+
+                runStageSafe(loc) {
+                    Bukkit.getConsoleSender().sendMessage("[UM] Ejecutando runStageSafe en ${Bukkit.getCurrentTick()}")
+                    // We delay 2 tick
+                    Bukkit.getScheduler().runTaskLater(core, Runnable {
+                        if (shouldSkipStageDueToRecentRemoval(loc))  return@Runnable
+                        c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                    }, 2L)
+                }
+                //c.handleStage(player, it, event, loc, toolUsed, generic, stage)
 
             }
         }

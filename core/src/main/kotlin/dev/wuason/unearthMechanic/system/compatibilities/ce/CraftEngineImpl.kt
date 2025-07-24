@@ -82,9 +82,12 @@ class CraftEngineImpl(
         StageData.removeStageData(event.bukkitBlock())
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        StageData.removeStageData(event.location())
+        val loc = event.location()
+
+        stageManager.markRemoval(loc)
+        StageData.removeStageData(loc)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
@@ -202,9 +205,8 @@ class CraftEngineImpl(
         if (event is FurnitureInteractEvent) {
             CraftEngineFurniture.remove(event.furniture().baseEntity())
         }
-        if (event is FurnitureBreakEvent) {
-            CraftEngineFurniture.remove(event.furniture().baseEntity())
-        }
+
+        stageManager.markRemoval(loc)
     }
 
     override fun hashCode(

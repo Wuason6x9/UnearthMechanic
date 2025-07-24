@@ -91,9 +91,12 @@ class NexoImpl(
         StageData.removeStageData(event.block)
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: NexoFurnitureBreakEvent) {
-        StageData.removeStageData(event.baseEntity.location)
+        val loc = event.baseEntity.location ?: return
+
+        stageManager.markRemoval(loc)
+        StageData.removeStageData(loc)
     }
 
 
@@ -183,6 +186,8 @@ class NexoImpl(
         if (event is NexoFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
+
+        stageManager.markRemoval(loc)
     }
 
     override fun hashCode(

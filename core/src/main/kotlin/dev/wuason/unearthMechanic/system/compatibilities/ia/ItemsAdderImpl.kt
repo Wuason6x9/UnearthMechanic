@@ -59,6 +59,9 @@ class ItemsAdderImpl(
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
+        val loc = event.bukkitEntity?.location ?: return
+        Bukkit.getConsoleSender().sendMessage("[IA] InteractFurniture en $loc - ID: ${event.namespacedID}")
+
         if (event.bukkitEntity != null) {
             val adapterId = "ia:" + event.namespacedID
             stageManager.interact(
@@ -76,9 +79,15 @@ class ItemsAdderImpl(
         StageData.removeStageData(event.block)
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        StageData.removeStageData(event.bukkitEntity.location)
+        //StageData.removeStageData(event.bukkitEntity.location)
+
+        val loc = event.bukkitEntity.location
+        stageManager.markRemoval(loc)
+        StageData.removeStageData(loc)
+        Bukkit.getConsoleSender().sendMessage("[IA] FurnitureBreakEvent ejecutado en $loc")
+        Bukkit.getConsoleSender().sendMessage("[DEBUG] FurnitureBreakEvent CURRENT TICK: ${Bukkit.getCurrentTick()}")
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
@@ -107,6 +116,7 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        Bukkit.getConsoleSender().sendMessage("[UM] handleStage en $loc - TICK: ${Bukkit.getCurrentTick()}")
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
@@ -136,9 +146,16 @@ class ItemsAdderImpl(
         stage: IStage
     ) {
         if (event is FurnitureInteractEvent) {
+            event.isCancelled = true
+
             val entityEvent: Entity = event.bukkitEntity
+            if(!entityEvent.isValid) {
+                //Bukkit.getConsoleSender().sendMessage(" NO ES VALIDO EL FURNITURE" +loc)
+                return
+            }
             event.furniture?.remove(false)
             CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
+                //Bukkit.getConsoleSender().sendMessage("[IA] spawn furniture at $loc - adapter ${itemAdapterData.id}")
                 val entity: Entity = customFurniture.entity ?: return
                 entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
 
@@ -163,8 +180,11 @@ class ItemsAdderImpl(
             breakBlock(loc)
         }
         if (event is FurnitureInteractEvent) {
+            //Bukkit.getConsoleSender().sendMessage("[IA] Furniture removido en $loc")
             event.furniture?.remove(false)
         }
+
+        stageManager.markRemoval(loc)
     }
 
     override fun hashCode(
