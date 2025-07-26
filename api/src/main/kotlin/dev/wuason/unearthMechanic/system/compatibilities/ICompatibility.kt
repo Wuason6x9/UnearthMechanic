@@ -9,10 +9,12 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.IStageManager
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.Listener
 import org.bukkit.inventory.ItemStack
+import java.util.UUID
 
 /**
  * Interface representing compatibility handling in the system. This interface must be implemented
@@ -143,6 +145,12 @@ abstract class ICompatibility(
      * It can be used to perform any necessary initialization procedures.
      */
     open fun onLoad() {}
+
+    abstract fun isRemoving(uuid: UUID): Boolean
+    abstract fun setRemoving(uuid: UUID)
+    abstract fun clearRemoving(uuid: UUID)
+    abstract fun getFurnitureUUID(location: Location): UUID?
+
 
 
 }

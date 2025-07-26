@@ -5,21 +5,22 @@ import dev.wuason.libs.adapter.AdapterData
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
-class Tool(private val adapterData: AdapterData, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val animation: Animation?, private val delay: Long, private val replaceOnBreak: String?): ITool {
+class Tool(private val adapterData: AdapterData, private val size: Int, private val deep: Int, private val depth: Int, private val sound: Sound?, private val animation: Animation?, private val permission: String?, private val delay: Long, private val replaceOnBreak: String?): ITool {
     companion object {
 
         fun Tool(adapterData: AdapterData): Tool {
-            return Tool(adapterData, 0, 0, 0, null, null, 0, null)
+            return Tool(adapterData, 0, 0, 0, null, null, null, 0, null)
         }
 
         fun parseTool(tool: String): Tool {
             val split: List<String> = tool.split(";")
-            if (split.size == 1) return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), 0, 0, 0, null, null, 0, null)
+            if (split.size == 1) return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), 0, 0, 0, null, null, null, 0, null)
             var size: Int = 0
             var deep: Int = 0
             var depth: Int = 0
             var sound: Sound? = null
             var anim: String? = null
+            var permission: String? = null
             var delayAnim: Long = 0
             var delay: Long = 0
             var replaceOnBreak: String? = null
@@ -32,6 +33,7 @@ class Tool(private val adapterData: AdapterData, private val size: Int, private 
                     "depth" -> depth = x[1].trim().toInt()
                     "sound" -> sound = Sound(x[1].trim(), 1.0f, 1.0f, 0)
                     "anim" -> anim = x[1].trim()
+                    "permission" -> permission = x[1].trim()
                     "delayanim" -> delayAnim = x[1].trim().toLong()
                     "delay" -> delay = x[1].trim().toLong()
                     "replaceonbreak" -> replaceOnBreak = x[1].trim()
@@ -50,7 +52,7 @@ class Tool(private val adapterData: AdapterData, private val size: Int, private 
                 if (depth < 1) depth = 1
             }
             val animation: Animation? = if (anim != null) Animation(if (delayAnim > 0) delayAnim else -1, anim!!) else null
-            return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), size, deep, depth, sound, animation, delay, replaceOnBreak)
+            return Tool(Adapter.getAdapterData(split[0].trim()).getOrNull()?: throw NullPointerException("The adapter id: ${split[0].trim()} doesn't exists!"), size, deep, depth, sound, animation, permission, delay, replaceOnBreak)
         }
     }
 
@@ -88,6 +90,9 @@ class Tool(private val adapterData: AdapterData, private val size: Int, private 
         if (animation != null) {
             builder.append(";anim=${animation}")
         }
+        if (permission != null) {
+            builder.append(";permission=${permission}")
+        }
         if (delay > 0) {
             builder.append(";delay=${delay}")
         }
@@ -113,6 +118,10 @@ class Tool(private val adapterData: AdapterData, private val size: Int, private 
 
     override fun getAnimation(): IAnimation? {
         return animation
+    }
+
+    override fun getToolPermission(): String? {
+        return permission
     }
 
     override fun getDelay(): Long {

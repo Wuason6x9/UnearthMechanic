@@ -93,6 +93,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val removeItemMainHand: Boolean = sectionStage.getBoolean("remove_item_main_hand", false)
                         val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
                         val usagesIaToRemove = sectionStage.getInt("reduce_usages_ia", 0)
+                        val permissionStage = sectionStage.getString("permission", "")
                         val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
                         val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
                         val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
@@ -120,6 +121,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                                 removeItemMainHand,
                                 durabilityToRemove,
                                 usagesIaToRemove,
+                                permissionStage,
                                 onlyOneDrop,
                                 reduceItemMainHand,
                                 items,
@@ -136,6 +138,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             removeItemMainHand,
                             durabilityToRemove,
                             usagesIaToRemove,
+                            permissionStage,
                             onlyOneDrop,
                             reduceItemMainHand,
                             items,
@@ -167,6 +170,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             false,
                             0,
                             0,
+                            "",
                             false,
                             0,
                             listOf<Item>(),

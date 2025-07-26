@@ -10,6 +10,7 @@ class FurnitureStage(
     removeItemMainHand: Boolean,
     durabilityToRemove: Int,
     usagesIaToRemove: Int,
+    permissionStage: String,
     onlyOneDrop: Boolean,
     reduceItemHand: Int,
     items: List<Item>,
@@ -18,6 +19,6 @@ class FurnitureStage(
     delay: Long,
     toolAnimDelay: Boolean
 ) : Stage(
-    stage, adapterData, drops, remove, removeItemMainHand, durabilityToRemove, usagesIaToRemove,
+    stage, adapterData, drops, remove, removeItemMainHand, durabilityToRemove, usagesIaToRemove, permissionStage,
     onlyOneDrop, reduceItemHand, items, onlyOneItem, sounds, delay, toolAnimDelay
 ), IFurnitureStage

@@ -1,7 +1,5 @@
 package dev.wuason.unearthMechanic.system.compatibilities.ce
 
-import dev.lone.itemsadder.api.CustomBlock
-import dev.lone.itemsadder.api.CustomFurniture
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -21,6 +19,7 @@ import net.momirealms.craftengine.bukkit.api.event.CustomBlockBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.CustomBlockInteractEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureInteractEvent
+import net.momirealms.craftengine.core.block.CustomBlock
 import net.momirealms.craftengine.core.entity.player.InteractionHand
 import net.momirealms.craftengine.libraries.nbt.CompoundTag
 import org.bukkit.Bukkit
@@ -40,6 +39,8 @@ import org.bukkit.inventory.ItemStack
 import java.util.concurrent.ConcurrentHashMap
 import net.momirealms.craftengine.core.util.Key
 import net.momirealms.craftengine.core.entity.furniture.AnchorType
+import net.momirealms.craftengine.core.entity.furniture.CustomFurniture
+import java.util.UUID
 
 class CraftEngineImpl(
     pluginName: String,
@@ -50,7 +51,38 @@ class CraftEngineImpl(
     pluginName,
     adapterComp
 ) {
+    private val removingMap = mutableSetOf<UUID>()
 
+    override fun isRemoving(uuid: UUID): Boolean {
+        return removingMap.contains(uuid)
+    }
+
+    override fun setRemoving(uuid: UUID) {
+        removingMap.add(uuid)
+    }
+
+    override fun clearRemoving(uuid: UUID) {
+        removingMap.remove(uuid)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        val world = location.world ?: return null
+
+        val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+        for (entity in entities) {
+            try {
+                val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
+                if (furniture != null) {
+                    return entity.uniqueId
+                }
+            } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
+                continue
+            }
+        }
+
+        return null
+    }
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -66,6 +98,11 @@ class CraftEngineImpl(
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
+        if (isRemoving(event.furniture().baseEntity().uniqueId)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.furniture().baseEntity() != null) {
             val adapterId = "ce:" + event.furniture().id()
             stageManager.interact(
@@ -84,27 +121,44 @@ class CraftEngineImpl(
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        val loc = event.location()
+        val uuid = event.furniture().baseEntity().uniqueId
 
-        stageManager.markRemoval(loc)
-        StageData.removeStageData(loc)
+        if (isRemoving(uuid)) {
+            event.isCancelled = true
+            return
+        }
+
+        StageData.removeStageData(event.location())
+
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            clearRemoving(uuid)
+        }, 2L)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
-        CustomBlock.place(adapterId.replace("ce:", ""), location)
+        val furnitureId = Key.of(adapterId.replace("ce:", ""))
+        val furniture = CraftEngineFurniture.byId(furnitureId)
+        val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+
+        CraftEngineFurniture.place(location,
+            furnitureId,
+            anchor,
+            true)
     }
 
     private fun breakBlock(location: Location?) {
-        CustomBlock.remove(location)
+        if (location != null) {
+            CraftEngineBlocks.remove(location.block)
+        }
     }
 
-    private fun replaceFurniture(adapterId: String, entity: Entity?) {
-        val customFurniture = CustomFurniture.byAlreadySpawned(entity)
-        customFurniture!!.replaceFurniture(adapterId.replace("ce:", ""))
+    private fun replaceFurniture(adapterId: String, entity: Entity) {
+        //val customFurniture = CustomFurniture.byAlreadySpawned(entity)
+        //customFurniture!!.replaceFurniture(adapterId.replace("ce:", ""))
     }
 
-    private fun breakFurniture(entity: Entity?, player: Player?) {
-        CustomFurniture.remove(entity, false)
+    private fun breakFurniture(entity: Entity, player: Player?) {
+        CraftEngineFurniture.remove(entity)
     }
 
     override fun handleStage(
@@ -205,8 +259,6 @@ class CraftEngineImpl(
         if (event is FurnitureInteractEvent) {
             CraftEngineFurniture.remove(event.furniture().baseEntity())
         }
-
-        stageManager.markRemoval(loc)
     }
 
     override fun hashCode(

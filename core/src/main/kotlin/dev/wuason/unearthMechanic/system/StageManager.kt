@@ -1,10 +1,13 @@
 package dev.wuason.unearthMechanic.system
 
+import com.sk89q.wepif.bPermissionsResolver
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.libs.protectionlib.ProtectionLib
 import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
+import dev.wuason.unearthMechanic.compatibilities.LuckPermsComp
+import dev.wuason.unearthMechanic.compatibilities.LuckPermsPlugin
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardComp
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.*
@@ -54,43 +57,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     private val animator: AnimationManager = AnimationManager(core)
 
-    private val recentRemovals = mutableMapOf<Location, Long>()
-    private val removalWindowTicks = 2L
+    private val stageExecutionTicks = mutableMapOf<Location, Long>()
 
-    fun markRemoval(loc: Location) {
-        recentRemovals[loc.clone()] = Bukkit.getCurrentTick().toLong()
-        Bukkit.getConsoleSender().sendMessage("[UM] REMOVAL marcada en ${loc.blockX},${loc.blockY},${loc.blockZ}")
-    }
-
-    private fun shouldSkipStageDueToRecentRemoval(loc: Location): Boolean {
-        val last = recentRemovals[loc.clone()]
-        val current = Bukkit.getCurrentTick().toLong()
-
-        if (last != null) {
-            val diff = current - last
-            Bukkit.getConsoleSender().sendMessage("[DEBUG] Evaluando remoción reciente en $loc")
-            Bukkit.getConsoleSender().sendMessage("[DEBUG] TICK ACTUAL: $current | Última remoción: $last | Diff: $diff")
-
-            if (diff <= removalWindowTicks) {
-                Bukkit.getConsoleSender().sendMessage("[UM] SKIP STAGE en $loc por REMOVAL reciente")
-                return true
-            }
-        }
-        return false
-    }
-
-    private val runningStages = mutableSetOf<Location>()
-
-    private fun runStageSafe(loc: Location, task: Runnable) {
-        if (!runningStages.add(loc.clone())) return  // there was already a pending execution
-        Bukkit.getScheduler().runTaskLater(core, Runnable {
-            try {
-                task.run()
-            } finally {
-                runningStages.remove(loc.clone())
-            }
-        }, 3L)
-    }
 
     init {
 
@@ -121,7 +89,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     fun interact(player: Player, baseItemId: String, location: Location, event: Event, compatibility: ICompatibility) {
         if (player.isSneaking) return
 
-        //player.sendMessage("el permiso es "+player.hasPermission("unearthMechanic.bypass"))
         //player.sendMessage("ProtectionLib es "+ProtectionLib.canInteract(player, location))
         //player.sendMessage("worldguard es "+WorldGuardPlugin.isWorldGuardEnabled())
 
@@ -142,7 +109,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
             interactNotExist(player, baseItemId.toAdapter()!!, location, event, compatibility, toolUsed.toAdapter()!!)
             return
         }
-
     }
 
     private fun interactExist(
@@ -190,6 +156,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         val generic = stageData.getGeneric()
 
         return player.isOp
+                || LuckPermsPlugin.isLuckPermsEnabled() && core.getLuckPermsComb().hasPermission(player,"unearthMechanic.bypass")
                 || player.hasPermission("unearthMechanic.bypass")
                 || generic.isNotProtect()
                 || (
@@ -236,6 +203,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         core: UnearthMechanic
     ): Boolean {
         return player.isOp
+                || LuckPermsPlugin.isLuckPermsEnabled() && core.getLuckPermsComb().hasPermission(player,"unearthMechanic.bypass")
                 || player.hasPermission("unearthMechanic.bypass")
                 || generic.isNotProtect()
                 || (
@@ -257,7 +225,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         generic: IGeneric,
         stage: Stage
     ) {
-        if (shouldSkipStageDueToRecentRemoval(loc.clone())) return //This stops the stage if it broke.
         //send event
         val eventStage: PreApplyStageEvent =
             PreApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
@@ -320,6 +287,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
+
     private fun onApplyStage(
         player: Player,
         compatibility: ICompatibility,
@@ -330,89 +298,95 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         stage: Stage,
         validation: Validation? = null
     ) {
+        //Bukkit.getConsoleSender().sendMessage("secso Tool "+toolUsed.getITool().getToolPermission().toString())
+        toolUsed.getITool()?.getToolPermission()?.let { permission ->
+            if (permission.isNotBlank()) {
+                val hasPermLuckPerms = if (LuckPermsPlugin.isLuckPermsEnabled()) {
+                    core.getLuckPermsComb().hasPermission(player, permission)
+                } else { player.hasPermission(permission) || player.isOp }
+                //Bukkit.getConsoleSender().sendMessage("El jugador tiene el permiso $permission y es $hasPermLuckPerms de Tool")
+                if (!hasPermLuckPerms) return
+            }
+        }
+        //Bukkit.getConsoleSender().sendMessage("secso Stage "+stage.getPermissionStage())
+        stage.getPermissionStage()?.let { permission ->
+            if (permission.isNotBlank()) {
+                val hasPermLuckPerms = if (LuckPermsPlugin.isLuckPermsEnabled()) {
+                    core.getLuckPermsComb().hasPermission(player, permission)
+                } else { player.hasPermission(permission) || player.isOp }
+                //Bukkit.getConsoleSender().sendMessage("El jugador tiene el permiso $permission y es $hasPermLuckPerms de Stage")
+                if (!hasPermLuckPerms) return
+            }
+        }
+
         val currentTick = Bukkit.getCurrentTick().toLong()
-        val lastRemoval = recentRemovals[loc]
-        if (lastRemoval != null && currentTick <= lastRemoval) {
-            Bukkit.getConsoleSender().sendMessage("[UM] onApplyStage RETRASADO: remoción es en mismo tick $currentTick")
-            Bukkit.getScheduler().runTaskLater(core, Runnable {
-                onApplyStage(player, compatibility, event, loc, toolUsed, generic, stage, validation)
-            }, 1L)
-            return
-        }
+        if (stageExecutionTicks[loc] == currentTick) return
+        stageExecutionTicks[loc] = currentTick
 
-        if ((validation != null && !validation.validate()) || !toolUsed.isOriginalItem() || !toolUsed.isValid() || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
+        val furnitureUuid = compatibility.getFurnitureUUID(loc)
 
-        val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
-        Bukkit.getPluginManager().callEvent(applyStageEvent)
-        if (applyStageEvent.isCancelled) return
-
-        if (validation == null) {
-            if (event is Cancellable) {
-                event.isCancelled = true
+        if(furnitureUuid != null){
+            if (compatibility.isRemoving(furnitureUuid)) {
+                Bukkit.getConsoleSender().sendMessage("[UM] Cancelado por 'removing' activa en $furnitureUuid")
+                return
             }
+            compatibility.setRemoving(furnitureUuid)
         }
 
-        Features.getFeatures().forEach { feature ->
-            try {
-                feature.onApply(player, compatibility, event, loc, toolUsed, stage, generic)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        try {
+            if ((validation != null && !validation.validate())
+                || !toolUsed.isOriginalItem() || !toolUsed.isValid()
+                || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
+
+            val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
+            Bukkit.getPluginManager().callEvent(applyStageEvent)
+            if (applyStageEvent.isCancelled) return
+
+            if (validation == null) {
+                if (event is Cancellable) {
+                    event.isCancelled = true
+                }
             }
-        }
-        stage.getAdapterData()?.let {
-            if (isSimilarCompatibility(it, compatibility)) {
 
-                if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
-                    val needsRemoval = !generic.getBackStage(stage).javaClass.isInstance(stage)
-                    if (needsRemoval) {
-                        markRemoval(loc)
+            Features.getFeatures().forEach { feature ->
+                try {
+                    feature.onApply(player, compatibility, event, loc, toolUsed, stage, generic)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            stage.getAdapterData()?.let {
+                if (isSimilarCompatibility(it, compatibility)) {
+
+                    if (!generic.getBackStage(stage).javaClass.isInstance(stage)) {
                         compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                        Bukkit.getConsoleSender().sendMessage("[UM] handleRemove aplicado para $furnitureUuid en $currentTick")
                     }
-                    //compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                }
+                    Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para $furnitureUuid en $currentTick")
+                    compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
 
-                runStageSafe(loc) {
-                    Bukkit.getConsoleSender().sendMessage("[UM] Ejecutando runStageSafe en ${Bukkit.getCurrentTick()}")
-                    Bukkit.getScheduler().runTaskLater(core, Runnable {
-                        if (shouldSkipStageDueToRecentRemoval(loc)) return@Runnable
-                        Bukkit.getConsoleSender().sendMessage("[UM] handleStage (con delay) en $loc, stage ${stage.getStage()}")
-                        compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
-                    }, 2L)
-                }
-
-                //compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
-
-            } else {
-                val c: ICompatibility =
-                    getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
-
-                val needsRemoval = !generic.getBackStage(stage).javaClass.isInstance(stage)
-                if (needsRemoval) {
-                    markRemoval(loc)
+                } else {
+                    val c: ICompatibility =
+                        getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
                     compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                }
+                    Bukkit.getConsoleSender().sendMessage("[UM] handleRemove2 aplicado para $furnitureUuid en $currentTick")
 
-                runStageSafe(loc) {
-                    Bukkit.getConsoleSender().sendMessage("[UM] Ejecutando runStageSafe en ${Bukkit.getCurrentTick()}")
-                    // We delay 2 tick
-                    Bukkit.getScheduler().runTaskLater(core, Runnable {
-                        if (shouldSkipStageDueToRecentRemoval(loc))  return@Runnable
-                        c.handleStage(player, it, event, loc, toolUsed, generic, stage)
-                    }, 2L)
+                    c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                    Bukkit.getConsoleSender().sendMessage("[UM] handleStage2 aplicado para $furnitureUuid en $currentTick")
                 }
-                //c.handleStage(player, it, event, loc, toolUsed, generic, stage)
-
             }
+
+            if (stage.isRemove() || generic.isLastStage(stage)) {
+                if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                StageData.removeStageData(loc)
+                return
+            }
+
+            StageData.saveStageData(loc, StageData(loc, stage.getStage() + 1, generic))
+        } finally {
+            if (furnitureUuid != null) compatibility.clearRemoving(furnitureUuid)
         }
-
-
-        if (stage.isRemove() || generic.isLastStage(stage)) {
-            if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-            StageData.removeStageData(loc)
-            return
-        }
-
-        StageData.saveStageData(loc, StageData(loc, stage.getStage() + 1, generic))
     }
 
     override fun getCompatibilitiesLoaded(): MutableList<ICompatibility> {

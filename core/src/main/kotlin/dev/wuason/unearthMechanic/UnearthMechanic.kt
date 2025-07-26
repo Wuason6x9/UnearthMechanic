@@ -1,11 +1,14 @@
 package dev.wuason.unearthMechanic
 
 import dev.wuason.mechanics.utils.AdventureUtils
+import dev.wuason.unearthMechanic.compatibilities.LuckPermsComp
+import dev.wuason.unearthMechanic.compatibilities.LuckPermsPlugin
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardComp
 import dev.wuason.unearthMechanic.compatibilities.WorldGuardPlugin
 import dev.wuason.unearthMechanic.config.ConfigManager
 import dev.wuason.unearthMechanic.system.IStageManager
 import dev.wuason.unearthMechanic.system.StageManager
+import net.luckperms.api.LuckPerms
 import org.bukkit.Bukkit
 
 class UnearthMechanic : UnearthMechanicPlugin() {
@@ -16,7 +19,8 @@ class UnearthMechanic : UnearthMechanicPlugin() {
             "ItemsAdder",
             "Oraxen",
             "Nexo",
-            "CraftEngine"
+            "CraftEngine",
+            "Vanilla"
         )
 
         private lateinit var instance: UnearthMechanic
@@ -34,9 +38,11 @@ class UnearthMechanic : UnearthMechanicPlugin() {
     private lateinit var configManager: ConfigManager
     private lateinit var stageManager: StageManager
     private lateinit var worldGuardComp: WorldGuardComp
+    private lateinit var luckPermsComb: LuckPermsComp
 
     override fun onMechanicLoad() {
         if (WorldGuardPlugin.isWorldGuardLoaded()) worldGuardComp = WorldGuardComp(this)
+        if(LuckPermsPlugin.isLuckPermsLoaded()) luckPermsComb = LuckPermsComp(this)
     }
 
     override fun onMechanicEnable() {
@@ -80,6 +86,10 @@ class UnearthMechanic : UnearthMechanicPlugin() {
 
     fun getWorldGuardComp(): WorldGuardComp {
         return worldGuardComp
+    }
+
+    fun getLuckPermsComb(): LuckPermsComp {
+        return luckPermsComb
     }
 
     fun checkCompatibility(): String? {

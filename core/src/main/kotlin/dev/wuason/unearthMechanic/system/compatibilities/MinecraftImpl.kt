@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system.compatibilities
 
+import dev.lone.itemsadder.api.CustomFurniture
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -33,6 +34,23 @@ class MinecraftImpl(
     pluginName,
     adapterComp
 ) {
+    private val removingMap = mutableSetOf<UUID>()
+
+    override fun isRemoving(uuid: UUID): Boolean {
+        return removingMap.contains(uuid)
+    }
+
+    override fun setRemoving(uuid: UUID) {
+        removingMap.add(uuid)
+    }
+
+    override fun clearRemoving(uuid: UUID) {
+        removingMap.remove(uuid)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        return null
+    }
 
     @EventHandler
     fun onInteractBlock(event: PlayerInteractEvent) {

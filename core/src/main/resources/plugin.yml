@@ -12,6 +12,7 @@ softdepend:
   - WorldGuard
   - Nexo
   - CraftEngine
+  - LuckPerms
 libraries:
   - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
 permissions:

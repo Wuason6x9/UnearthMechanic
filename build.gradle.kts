@@ -181,6 +181,8 @@ subprojects {
 
         compileOnly("net.momirealms:craft-engine-core:0.0.59")
         compileOnly("net.momirealms:craft-engine-bukkit:0.0.59")
+
+        compileOnly("net.luckperms:api:5.4")
     }
 }
 

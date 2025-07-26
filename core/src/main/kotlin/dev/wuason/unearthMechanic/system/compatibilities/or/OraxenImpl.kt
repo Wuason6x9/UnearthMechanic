@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system.compatibilities.or
 
+import com.nexomc.nexo.api.NexoFurniture
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -19,6 +20,7 @@ import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockInteractEvent
 import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockBreakEvent
 import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockInteractEvent
 import io.th0rgal.oraxen.utils.drops.Drop
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -30,6 +32,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import java.util.UUID
 
 class OraxenImpl(
     pluginName: String,
@@ -40,6 +43,38 @@ class OraxenImpl(
     pluginName,
     adapterComp
 ) {
+    private val removingMap = mutableSetOf<UUID>()
+
+    override fun isRemoving(uuid: UUID): Boolean {
+        return removingMap.contains(uuid)
+    }
+
+    override fun setRemoving(uuid: UUID) {
+        removingMap.add(uuid)
+    }
+
+    override fun clearRemoving(uuid: UUID) {
+        removingMap.remove(uuid)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        val world = location.world ?: return null
+
+        val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+        for (entity in entities) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null) {
+                    return entity.uniqueId
+                }
+            } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
+                continue
+            }
+        }
+
+        return null
+    }
 
     @EventHandler
     fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
@@ -69,6 +104,11 @@ class OraxenImpl(
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
+        if (isRemoving(event.baseEntity.uniqueId)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -92,7 +132,18 @@ class OraxenImpl(
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
+        val uuid = event.baseEntity.uniqueId
+
+        if (isRemoving(uuid)) {
+            event.isCancelled = true
+            return
+        }
+
         StageData.removeStageData(event.baseEntity.location)
+
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            clearRemoving(uuid)
+        }, 2L)
     }
 
 

@@ -6,6 +6,7 @@ import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
 import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
+import dev.lone.itemsadder.api.ItemsAdder
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -32,6 +33,8 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import org.bukkit.metadata.FixedMetadataValue
+import java.util.UUID
 
 class ItemsAdderImpl(
     pluginName: String,
@@ -43,6 +46,40 @@ class ItemsAdderImpl(
     adapterComp
 ) {
 
+    private val removingMap = mutableSetOf<UUID>()
+
+    override fun isRemoving(uuid: UUID): Boolean {
+        return removingMap.contains(uuid)
+    }
+
+    override fun setRemoving(uuid: UUID) {
+        removingMap.add(uuid)
+    }
+
+    override fun clearRemoving(uuid: UUID) {
+        removingMap.remove(uuid)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        val world = location.world ?: return null
+
+        // Revisamos entidades en el radio cercano (1 bloque)
+        val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+
+        for (entity in entities) {
+            try {
+                val furniture = CustomFurniture.byAlreadySpawned(entity)
+                if (furniture != null) {
+                    return entity.uniqueId
+                }
+            } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
+                continue
+            }
+        }
+
+        return null
+    }
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
@@ -59,8 +96,14 @@ class ItemsAdderImpl(
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        val loc = event.bukkitEntity?.location ?: return
-        Bukkit.getConsoleSender().sendMessage("[IA] InteractFurniture en $loc - ID: ${event.namespacedID}")
+        if (isRemoving(event.bukkitEntity.uniqueId)) {
+            event.isCancelled = true
+            return
+        }
+
+        val currentTick = Bukkit.getCurrentTick().toLong()
+        val furnitureUuid = getFurnitureUUID(event.bukkitEntity.location) ?: return
+        Bukkit.getConsoleSender().sendMessage("[UM] onInteractFurniture aplicado para $furnitureUuid en $currentTick")
 
         if (event.bukkitEntity != null) {
             val adapterId = "ia:" + event.namespacedID
@@ -81,13 +124,22 @@ class ItemsAdderImpl(
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        //StageData.removeStageData(event.bukkitEntity.location)
+        val uuid = event.bukkitEntity.uniqueId
 
-        val loc = event.bukkitEntity.location
-        stageManager.markRemoval(loc)
-        StageData.removeStageData(loc)
-        Bukkit.getConsoleSender().sendMessage("[IA] FurnitureBreakEvent ejecutado en $loc")
-        Bukkit.getConsoleSender().sendMessage("[DEBUG] FurnitureBreakEvent CURRENT TICK: ${Bukkit.getCurrentTick()}")
+        if (isRemoving(uuid)) {
+            event.isCancelled = true
+            return
+        }
+
+        StageData.removeStageData(event.bukkitEntity.location)
+
+        val currentTick = Bukkit.getCurrentTick().toLong()
+        val furnitureUuid = getFurnitureUUID(event.bukkitEntity.location) ?: return
+        Bukkit.getConsoleSender().sendMessage("[UM] FurnitureBreakEvent aplicado para $furnitureUuid en $currentTick")
+
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            clearRemoving(uuid)
+        }, 2L)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
@@ -181,10 +233,11 @@ class ItemsAdderImpl(
         }
         if (event is FurnitureInteractEvent) {
             //Bukkit.getConsoleSender().sendMessage("[IA] Furniture removido en $loc")
+            val uuid = event.bukkitEntity.uniqueId
+            clearRemoving(uuid)
+
             event.furniture?.remove(false)
         }
-
-        stageManager.markRemoval(loc)
     }
 
     override fun hashCode(
