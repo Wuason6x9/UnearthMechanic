@@ -179,8 +179,8 @@ subprojects {
         compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12-SNAPSHOT")
         compileOnly("com.nexomc:nexo:0.4.0:dev")
 
-        compileOnly("net.momirealms:craft-engine-core:0.0.59")
-        compileOnly("net.momirealms:craft-engine-bukkit:0.0.59")
+        compileOnly("net.momirealms:craft-engine-core:0.0.60")
+        compileOnly("net.momirealms:craft-engine-bukkit:0.0.60")
 
         compileOnly("net.luckperms:api:5.4")
     }

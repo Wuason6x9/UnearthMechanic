@@ -76,6 +76,24 @@ class OraxenImpl(
         return null
     }
 
+    override fun isValid(location: Location): Boolean {
+        val world = location.world ?: return false
+        val nearby = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+
+        for (entity in nearby) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    return true
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        return false
+    }
+
     @EventHandler
     fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
         if (event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK) {
@@ -109,15 +127,17 @@ class OraxenImpl(
             return
         }
 
-        if (event.hand == EquipmentSlot.HAND) {
-            stageManager.interact(
-                event.player,
-                getPath(event.mechanic.itemID),
-                event.baseEntity.location,
-                event,
-                this
-            )
-        }
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            if (event.hand == EquipmentSlot.HAND) {
+                stageManager.interact(
+                    event.player,
+                    getPath(event.mechanic.itemID),
+                    event.baseEntity.location,
+                    event,
+                    this
+                )
+            }
+        }, 2L)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -138,6 +158,8 @@ class OraxenImpl(
             event.isCancelled = true
             return
         }
+
+        setRemoving(uuid)
 
         StageData.removeStageData(event.baseEntity.location)
 

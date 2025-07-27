@@ -146,11 +146,37 @@ abstract class ICompatibility(
      */
     open fun onLoad() {}
 
-    abstract fun isRemoving(uuid: UUID): Boolean
-    abstract fun setRemoving(uuid: UUID)
-    abstract fun clearRemoving(uuid: UUID)
-    abstract fun getFurnitureUUID(location: Location): UUID?
+    /**
+     * Checks if the block or furniture at the given location is still valid for processing sequences.
+     * Default implementation always returns true.
+     *
+     * @param location The location to validate.
+     * @return true if valid, false otherwise.
+     */
+    open fun isValid(location: Location): Boolean = true
 
+    /**
+     * Indicates if the current given UUID is in the process of being removed (e.g., a furniture entity).
+     */
+    abstract fun isRemoving(uuid: UUID): Boolean
+
+    /**
+     * Marks the given UUID as being removed, to prevent duplicate removal operations.
+     */
+    abstract fun setRemoving(uuid: UUID)
+
+    /**
+     * Clears the removing mark for the given UUID after removal has completed.
+     */
+    abstract fun clearRemoving(uuid: UUID)
+
+    /**
+     * Retrieves the UUID of a furniture entity at the given location, if present.
+     *
+     * @param location The location to check.
+     * @return The UUID of the furniture entity, or null if none found.
+     */
+    abstract fun getFurnitureUUID(location: Location): UUID?
 
 
 }

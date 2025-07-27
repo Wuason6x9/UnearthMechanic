@@ -115,4 +115,14 @@ open class Stage(
             return -1
         }
     }
+
+    private var sequenceStages: Map<Long, Stage>? = null
+
+    fun setSequenceStages(sequence: Map<Long, Stage>) {
+        this.sequenceStages = sequence
+    }
+
+    fun getSequenceStages(): Map<Long, Stage>? {
+        return sequenceStages
+    }
 }

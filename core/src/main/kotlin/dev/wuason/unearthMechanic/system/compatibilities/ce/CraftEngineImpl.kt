@@ -19,7 +19,6 @@ import net.momirealms.craftengine.bukkit.api.event.CustomBlockBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.CustomBlockInteractEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureInteractEvent
-import net.momirealms.craftengine.core.block.CustomBlock
 import net.momirealms.craftengine.core.entity.player.InteractionHand
 import net.momirealms.craftengine.libraries.nbt.CompoundTag
 import org.bukkit.Bukkit
@@ -84,10 +83,28 @@ class CraftEngineImpl(
         return null
     }
 
+    override fun isValid(location: Location): Boolean {
+        val world = location.world ?: return false
+        val nearby = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+
+        for (entity in nearby) {
+            try {
+                val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    return true
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        return false
+    }
+
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
         if (event.hand() != InteractionHand.MAIN_HAND) return
-        val adapterId = "ce:" + event.customBlock().id().toString()
+        val adapterId = "ce:" + event.customBlock().id()
 
         stageManager.interact(event.player(),
             adapterId,
@@ -103,15 +120,17 @@ class CraftEngineImpl(
             return
         }
 
-        if (event.furniture().baseEntity() != null) {
-            val adapterId = "ce:" + event.furniture().id()
-            stageManager.interact(
-                event.player,
-                adapterId,
-                event.location(),
-                event,
-                this)
-        }
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            if (event.furniture().baseEntity() != null) {
+                val adapterId = "ce:" + event.furniture().id()
+                stageManager.interact(
+                    event.player,
+                    adapterId,
+                    event.location(),
+                    event,
+                    this)
+            }
+        }, 2L)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -128,7 +147,9 @@ class CraftEngineImpl(
             return
         }
 
-        StageData.removeStageData(event.location())
+        setRemoving(uuid)
+
+        StageData.removeStageData(event.furniture().baseEntity().location)
 
         Bukkit.getScheduler().runTaskLater(core, Runnable {
             clearRemoving(uuid)
@@ -143,7 +164,7 @@ class CraftEngineImpl(
         CraftEngineFurniture.place(location,
             furnitureId,
             anchor,
-            true)
+            false)
     }
 
     private fun breakBlock(location: Location?) {
@@ -190,7 +211,7 @@ class CraftEngineImpl(
             loc,
             Key.of(itemAdapterData.id.removePrefix("ce:")),
             CompoundTag(),
-            true
+            false
         )
         //placeBlock(itemAdapterData.id, loc)
     }
@@ -224,7 +245,7 @@ class CraftEngineImpl(
             CraftEngineFurniture.place(loc,
                 furnitureId,
                 anchor,
-                true)?.let { customFurniture ->
+                false)?.let { customFurniture ->
 
                 val entity: Entity = customFurniture.baseEntity() ?: return
                 entity.setRotation(entity.location.yaw, entity.location.pitch)
@@ -240,7 +261,7 @@ class CraftEngineImpl(
             CraftEngineFurniture.place(loc,
                 furnitureId,
                 anchor,
-                true)
+                false)
         }
     }
 

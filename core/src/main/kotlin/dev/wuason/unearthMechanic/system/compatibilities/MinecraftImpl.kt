@@ -52,6 +52,10 @@ class MinecraftImpl(
         return null
     }
 
+    override fun isValid(location: Location): Boolean {
+        return false
+    }
+
     @EventHandler
     fun onInteractBlock(event: PlayerInteractEvent) {
         if (event.hasBlock() && event.hand == EquipmentSlot.HAND && event.action == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() == Event.Result.ALLOW) {

@@ -35,6 +35,7 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.metadata.FixedMetadataValue
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class ItemsAdderImpl(
     pluginName: String,
@@ -81,6 +82,33 @@ class ItemsAdderImpl(
         return null
     }
 
+    override fun isValid(location: Location): Boolean {
+        val world = location.world ?: return false
+
+        // Check for furniture
+        val nearby = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+        for (entity in nearby) {
+            try {
+                val furniture = CustomFurniture.byAlreadySpawned(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    //Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] isValid: furniture válido encontrado en $location (${furniture.namespace}:${furniture.id})")
+                    return true
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+        // Second: Check for physical blockage
+        val block = location.block
+        if (block.type != org.bukkit.Material.AIR) {
+            //Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] isValid: bloque válido encontrado en $location (${block.type})")
+            return true
+        }
+
+        //Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] isValid: no se encontró bloque ni furniture en $location")
+        return false
+    }
+
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
         if (event.action == Action.RIGHT_CLICK_BLOCK && event.hand == EquipmentSlot.HAND) {
@@ -97,7 +125,7 @@ class ItemsAdderImpl(
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
         if (isRemoving(event.bukkitEntity.uniqueId)) {
-            event.isCancelled = true
+            Bukkit.getConsoleSender().sendMessage("[UM] Cancelado2 por 'removing' activa en "+event.bukkitEntity.uniqueId)
             return
         }
 
@@ -105,16 +133,18 @@ class ItemsAdderImpl(
         val furnitureUuid = getFurnitureUUID(event.bukkitEntity.location) ?: return
         Bukkit.getConsoleSender().sendMessage("[UM] onInteractFurniture aplicado para $furnitureUuid en $currentTick")
 
-        if (event.bukkitEntity != null) {
-            val adapterId = "ia:" + event.namespacedID
-            stageManager.interact(
-                event.player,
-                adapterId,
-                event.bukkitEntity.location,
-                event,
-                this
-            )
-        }
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            if (event.bukkitEntity != null) {
+                val adapterId = "ia:" + event.namespacedID
+                stageManager.interact(
+                    event.player,
+                    adapterId,
+                    event.bukkitEntity.location,
+                    event,
+                    this
+                )
+            }
+        }, 2L)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -130,6 +160,8 @@ class ItemsAdderImpl(
             event.isCancelled = true
             return
         }
+
+        setRemoving(event.bukkitEntity.uniqueId)
 
         StageData.removeStageData(event.bukkitEntity.location)
 
@@ -168,6 +200,7 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] handleStage ejecutado con adapterData: ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id}")
         Bukkit.getConsoleSender().sendMessage("[UM] handleStage en $loc - TICK: ${Bukkit.getCurrentTick()}")
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
