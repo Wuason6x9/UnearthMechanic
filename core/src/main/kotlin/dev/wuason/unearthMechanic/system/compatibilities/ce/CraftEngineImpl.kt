@@ -98,6 +98,8 @@ class CraftEngineImpl(
             }
         }
 
+        if (location.block.type != org.bukkit.Material.AIR) return true
+
         return false
     }
 
@@ -276,9 +278,31 @@ class CraftEngineImpl(
         if (event is CustomBlockInteractEvent) {
             //breakBlock(loc)
             CraftEngineBlocks.remove(event.bukkitBlock())
+            return
         }
         if (event is FurnitureInteractEvent) {
             CraftEngineFurniture.remove(event.furniture().baseEntity())
+
+            val uuid = event.furniture().baseEntity().uniqueId
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                clearRemoving(uuid)
+            }, 5L)
+            return
+        }
+
+        val nearby = loc.world.getNearbyEntities(loc, 1.0, 1.0, 1.0)
+        for (entity in nearby) {
+            try {
+                val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    CraftEngineFurniture.remove(entity)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+        if (loc.block.type != org.bukkit.Material.AIR) {
+            breakBlock(loc)
         }
     }
 

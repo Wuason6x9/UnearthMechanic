@@ -92,6 +92,9 @@ class NexoImpl(
             }
         }
 
+        val block = location.block
+        if (block.type != org.bukkit.Material.AIR) return true
+
         return false
     }
 
@@ -257,6 +260,23 @@ class NexoImpl(
         }
         if (event is NexoFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
+        }
+
+        val nearby = loc.world.getNearbyEntities(loc, 1.0, 1.0, 1.0)
+
+        for (entity in nearby) {
+            try {
+                val furniture = NexoFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    NexoFurniture.remove(entity)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) {
+            NexoBlocks.remove(loc)
         }
     }
 

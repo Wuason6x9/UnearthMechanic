@@ -1,6 +1,5 @@
 package dev.wuason.unearthMechanic.system.compatibilities.or
 
-import com.nexomc.nexo.api.NexoFurniture
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -90,6 +89,8 @@ class OraxenImpl(
                 continue
             }
         }
+
+        if (location.block.type != org.bukkit.Material.AIR) return true
 
         return false
     }
@@ -250,10 +251,29 @@ class OraxenImpl(
         stage: IStage
     ) {
         if (event is OraxenNoteBlockInteractEvent || event is OraxenStringBlockInteractEvent) {
+            OraxenBlocks.remove(loc,player)
+
             loc.block.type = org.bukkit.Material.AIR
         }
         if (event is OraxenFurnitureInteractEvent) {
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
+        }
+
+        val nearby = loc.world.getNearbyEntities(loc, 1.0, 1.0, 1.0)
+
+        for (entity in nearby) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    OraxenFurniture.remove(loc,player)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) {
+            OraxenBlocks.remove(loc,player)
         }
     }
 

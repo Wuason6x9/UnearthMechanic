@@ -58,9 +58,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     private val animator: AnimationManager = AnimationManager(core)
 
-    private val stageExecutionTicks = mutableMapOf<Location, Long>()
-
-
     private val activeSequences = mutableSetOf<Location>()
     private val scheduledTasks = mutableMapOf<Location, MutableList<BukkitTask>>()
 
@@ -328,19 +325,17 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
 
         val currentTick = Bukkit.getCurrentTick().toLong()
-        if (stageExecutionTicks[loc] == currentTick) return
-        stageExecutionTicks[loc] = currentTick
 
         val furnitureUuid = compatibility.getFurnitureUUID(loc)
 
-        if (furnitureUuid != null) {
-            Bukkit.getConsoleSender().sendMessage("asd "+compatibility.isRemoving(furnitureUuid))
-            if (compatibility.isRemoving(furnitureUuid)) {
-                Bukkit.getConsoleSender().sendMessage("[UM] Cancelado por 'removing' activa en $furnitureUuid")
+        /*
+        if(furnitureUuid != null){
+            if(compatibility.isRemoving(furnitureUuid)){
+                Bukkit.getConsoleSender().sendMessage("[UM] Cancelado por un removing $furnitureUuid en $currentTick")
                 return
             }
             compatibility.setRemoving(furnitureUuid)
-        }
+        }*/
 
         try {
             if ((validation != null && !validation.validate())
@@ -405,6 +400,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         }
     }
 
+    var lastSequenceStage = arrayOfNulls<IStage>(1)
+
     private fun handleSequence(
         player: Player,
         compatibility: ICompatibility,
@@ -420,6 +417,8 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
         val tasks = mutableListOf<BukkitTask>()
         activeSequences.add(loc)
 
+        lastSequenceStage[0] = stage
+
         sequenceStages.forEach { (delayTicks, sequenceStage) ->
             val task = Bukkit.getScheduler().runTaskLater(core, Runnable {
                 if (!activeSequences.contains(loc)) return@Runnable
@@ -434,7 +433,17 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 //Bukkit.getConsoleSender().sendMessage("[UM] Ejecutando sequence del stage ${stage.getStage()} con delay $delayTicks ticks para furniture $adapterId")
 
                 val fakeEvent = FakePlayerInteractEvent(player, loc.block, player.inventory.itemInMainHand, EquipmentSlot.HAND)
+
+                if (lastSequenceStage.isNotEmpty()) {
+                    lastSequenceStage[0]?.let { prevStage ->
+                        //core.logger.info("[UM] Eliminando stage anterior: ${prevStage.getAdapterData()?.adapter?.type}:${prevStage.getAdapterData()?.id}")
+                        compatibility.handleRemove(player, fakeEvent, loc, toolUsed, generic, prevStage)
+                    }
+                }
+
                 applySequenceStep(player, compatibility, fakeEvent, loc, toolUsed, generic, sequenceStage)
+
+                lastSequenceStage[0] = sequenceStage
 
                 if (delayTicks == sequenceStages.keys.maxOrNull()) {
                     Bukkit.getConsoleSender().sendMessage("[UM] Secuencia finalizada en $loc.")
@@ -445,6 +454,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                     if (nextStage < generic.getStages().size) {
                         StageData.saveStageData(loc, StageData(loc, nextStage, generic))
                     } else {
+                        //StageData.saveStageData(loc, StageData(loc, stage.getStage(), generic))
                         StageData.removeStageData(loc)
                     }
                 }
@@ -466,17 +476,13 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         val currentTick = Bukkit.getCurrentTick().toLong()
 
-        val furnitureUuid = compatibility.getFurnitureUUID(loc)
-        if (furnitureUuid != null) {
-            if (compatibility.isRemoving(furnitureUuid)) {
-                //Bukkit.getConsoleSender().sendMessage("[UM] Cancelado por 'removing' activa en $furnitureUuid")
-                return
-            }
-            compatibility.setRemoving(furnitureUuid)
-        }
-
         stage.getAdapterData()?.let {
             if (isSimilarCompatibility(it, compatibility)) {
+                if (!compatibility.isValid(loc)) {
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    //Bukkit.getConsoleSender().sendMessage("[UM] handleRemove aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
+                }
+
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para $furnitureUuid en $currentTick")
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
                 compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)

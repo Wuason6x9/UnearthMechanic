@@ -182,10 +182,10 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                                 sequenceStages[delay] = subStage
                             }
 
-                            Bukkit.getConsoleSender().sendMessage("[UM] Cargando sequence en stage ${stage.getStage()} del id '$id' con ${sequenceStages.size} paso(s).")
+                            /*Bukkit.getConsoleSender().sendMessage("[UM] Cargando sequence en stage ${stage.getStage()} del id '$id' con ${sequenceStages.size} paso(s).")
                             sequenceStages.forEach { (delay, subStage) ->
                                 Bukkit.getConsoleSender().sendMessage("[UM] - Paso con delay $delay ticks, ${subStage.getAdapterData()?.type}:${subStage.getAdapterData()?.id}")
-                            }
+                            }*/
 
                             stage.setSequenceStages(sequenceStages)
                         }
