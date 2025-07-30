@@ -1,18 +1,13 @@
 package dev.wuason.unearthMechanic.system.compatibilities.ce
 
-import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
-import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
-import dev.wuason.unearthMechanic.system.IStageManager
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import dev.wuason.unearthMechanic.system.compatibilities.ia.ItemsAdderImpl
-import dev.wuason.unearthMechanic.system.features.Features
 import dev.wuason.unearthMechanic.utils.Utils
 import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks
 import net.momirealms.craftengine.bukkit.api.CraftEngineFurniture
@@ -20,6 +15,7 @@ import net.momirealms.craftengine.bukkit.api.event.CustomBlockBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.CustomBlockInteractEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureBreakEvent
 import net.momirealms.craftengine.bukkit.api.event.FurnitureInteractEvent
+import net.momirealms.craftengine.bukkit.api.event.FurniturePlaceEvent
 import net.momirealms.craftengine.core.entity.player.InteractionHand
 import net.momirealms.craftengine.libraries.nbt.CompoundTag
 import org.bukkit.Bukkit
@@ -32,14 +28,10 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
-import org.bukkit.event.block.Action
-import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
-import java.util.concurrent.ConcurrentHashMap
 import net.momirealms.craftengine.core.util.Key
 import net.momirealms.craftengine.core.entity.furniture.AnchorType
-import net.momirealms.craftengine.core.entity.furniture.CustomFurniture
 import java.util.Collections
 import java.util.UUID
 
@@ -69,6 +61,10 @@ class CraftEngineImpl(
     companion object {
         private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
         val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
@@ -149,9 +145,14 @@ class CraftEngineImpl(
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
 
         val loc = event.furniture().baseEntity().location.block.location
-        
-        StageData.removeStageData(event.furniture().baseEntity().location)
+
+        removeStageData(loc)
         setRemoving(loc)
+    }
+
+    @EventHandler
+    fun onFurniturePlace(event: FurniturePlaceEvent) {
+        clearRemoving(event.furniture().location().block.location)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
@@ -195,6 +196,22 @@ class CraftEngineImpl(
             Bukkit.getScheduler().runTaskLater(core, Runnable {
                 handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
             }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
@@ -322,6 +339,7 @@ class CraftEngineImpl(
             }
             setRemoving(event.furniture().baseEntity().location.block.location)
 
+            removeStageData(event.furniture().baseEntity().location.block.location)
             CraftEngineFurniture.remove(event.furniture().baseEntity())
             return
         }

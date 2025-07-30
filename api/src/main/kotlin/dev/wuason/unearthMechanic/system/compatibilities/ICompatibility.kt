@@ -95,6 +95,16 @@ abstract class ICompatibility(
         stage: IStage
     )
 
+    abstract fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    )
+
     /**
      * Handles the removal of an item from a specific stage when an event occurs.
      *

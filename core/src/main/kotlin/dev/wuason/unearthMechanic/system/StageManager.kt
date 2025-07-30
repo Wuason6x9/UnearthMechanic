@@ -444,7 +444,6 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                             furnitureuuid?.let { compatibility.clearRemoving(loc.block.location) }
                         }
                     } else {
-                        //StageData.saveStageData(loc, StageData(loc, stage.getStage(), generic))
                         StageData.removeStageData(loc)
 
                         compatibility.getFurnitureUUID(loc).let { furnitureuuid ->
@@ -479,7 +478,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para $furnitureUuid en $currentTick")
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
-                compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                compatibility.handleSequenceStage(player, it, event, loc, toolUsed, generic, stage)
 
             } else {
                 val c: ICompatibility =
@@ -487,7 +486,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleRemove2 aplicado para $furnitureUuid en $currentTick")
 
-                c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                c.handleSequenceStage(player, it, event, loc, toolUsed, generic, stage)
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
                 //Bukkit.getConsoleSender().sendMessage("[UM] handleStage2 aplicado para $furnitureUuid en $currentTick")
             }

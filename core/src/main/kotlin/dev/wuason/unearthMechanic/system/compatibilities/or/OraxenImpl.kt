@@ -15,6 +15,7 @@ import io.th0rgal.oraxen.api.OraxenBlocks
 import io.th0rgal.oraxen.api.OraxenFurniture
 import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureBreakEvent
 import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureInteractEvent
+import io.th0rgal.oraxen.api.events.furniture.OraxenFurniturePlaceEvent
 import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockBreakEvent
 import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockInteractEvent
 import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockBreakEvent
@@ -61,6 +62,10 @@ class OraxenImpl(
     companion object {
         private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
         val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
@@ -155,9 +160,15 @@ class OraxenImpl(
     fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
         val loc = event.baseEntity.location.block.location
 
-        StageData.removeStageData(event.baseEntity.location)
+        removeStageData(loc)
         setRemoving(loc)
     }
+
+    @EventHandler
+    fun onFurniturePlace(event: OraxenFurniturePlaceEvent) {
+        clearRemoving(event.baseEntity.location.block.location)
+    }
+
 
 
     private fun placeBlock(itemAdapterData: AdapterData, location: Location) {
@@ -205,6 +216,22 @@ class OraxenImpl(
         }
     }
 
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        }
+    }
+
     private fun handleBlockStage(
         player: Player,
         itemAdapterData: AdapterData,
@@ -229,7 +256,7 @@ class OraxenImpl(
         if(isRemoving(loc.block.location)){
             if(!stageManager.activeSequences.contains(loc.block.location)){
                 clearRemoving(loc.block.location)
-                }
+            }
             return
         }
         if (event is OraxenFurnitureInteractEvent) {
@@ -276,6 +303,7 @@ class OraxenImpl(
             }
             setRemoving(event.baseEntity.location.block.location)
 
+            removeStageData(event.baseEntity.location.block.location)
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
 

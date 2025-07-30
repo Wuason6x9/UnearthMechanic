@@ -6,6 +6,7 @@ import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
 import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
+import dev.lone.itemsadder.api.Events.FurniturePlaceEvent
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
@@ -15,8 +16,10 @@ import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.utils.Utils
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes.entity
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.entity.Entity
@@ -28,6 +31,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
 import java.util.Collections
 import java.util.UUID
 import kotlin.collections.set
@@ -59,6 +63,10 @@ class ItemsAdderImpl(
     companion object {
         private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
         val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
@@ -152,8 +160,37 @@ class ItemsAdderImpl(
 
         val loc = event.bukkitEntity.location.block.location
 
-        StageData.removeStageData(event.bukkitEntity.location)
+        removeStageData(loc)
         setRemoving(loc)
+
+        if(!isRemoving(loc)){
+            if(!stageManager.activeSequences.contains(loc)){
+                clearRemoving(loc)
+            }
+        }
+    }
+
+    @EventHandler
+    fun onFurniturePlace(event: FurniturePlaceEvent) {
+        val player = event.player
+        val idPlaced = event.namespacedID
+
+        Bukkit.getScheduler().runTaskLater(core, Runnable {
+            val nearby = player.world.getNearbyEntities(player.location, 5.0, 5.0, 5.0)
+
+            val furniture = nearby
+                .filterIsInstance<ItemFrame>()
+                .firstOrNull { frame ->
+                    val key = NamespacedKey("itemsadder", "placeable_entity_item")
+                    val entityId = frame.persistentDataContainer.get(key, PersistentDataType.STRING)
+                    entityId == idPlaced
+                }
+
+            furniture?.let {
+                clearRemoving(it.location.block.location)
+                //Bukkit.getConsoleSender().sendMessage("[DEBUG] Furniture desbloqueado en ${it.location.block.location}")
+            }
+        }, 3L)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
@@ -190,6 +227,22 @@ class ItemsAdderImpl(
             Bukkit.getScheduler().runTaskLater(core, Runnable {
                 handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
             }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
@@ -264,7 +317,7 @@ class ItemsAdderImpl(
                     //Bukkit.getConsoleSender().sendMessage("clearRemoving "+event.bukkitEntity.location.block.location)
                     clearRemoving(event.bukkitEntity.location.block.location)
                 }
-            }, 3L)
+            }, 5L)
         } else {
             // Sequence System
             val rotation = rotationMap.remove(loc)
@@ -303,6 +356,7 @@ class ItemsAdderImpl(
 
             //Bukkit.getConsoleSender().sendMessage("[IA] Furniture removido en $loc")
             val uuid = event.bukkitEntity.uniqueId
+            removeStageData(event.bukkitEntity.location.block.location)
             event.furniture?.remove(false)
             return
         }

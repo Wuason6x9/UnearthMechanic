@@ -8,19 +8,17 @@ import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockBreakE
 import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockInteractEvent
 import com.nexomc.nexo.api.events.furniture.NexoFurnitureBreakEvent
 import com.nexomc.nexo.api.events.furniture.NexoFurnitureInteractEvent
+import com.nexomc.nexo.api.events.furniture.NexoFurniturePlaceEvent
 import com.nexomc.nexo.utils.drops.Drop
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
-import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
-import dev.wuason.unearthMechanic.system.compatibilities.ce.CraftEngineImpl
 import dev.wuason.unearthMechanic.utils.Utils
-import net.momirealms.craftengine.bukkit.api.CraftEngineFurniture
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
@@ -63,6 +61,10 @@ class NexoImpl(
     companion object {
         private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
         val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
@@ -159,8 +161,13 @@ class NexoImpl(
     fun onFurnitureBreak(event: NexoFurnitureBreakEvent) {
         val loc = event.baseEntity.location.block.location
 
-        StageData.removeStageData(event.baseEntity.location)
+        removeStageData(loc)
         setRemoving(loc)
+    }
+
+    @EventHandler
+    fun onFurniturePlace(event: NexoFurniturePlaceEvent) {
+        clearRemoving(event.baseEntity.location.block.location)
     }
 
 
@@ -206,6 +213,22 @@ class NexoImpl(
             Bukkit.getScheduler().runTaskLater(core, Runnable {
                 handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
             }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
+            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
 
@@ -278,6 +301,7 @@ class NexoImpl(
             }
             setRemoving(event.baseEntity.location.block.location)
 
+            removeStageData(event.baseEntity.location.block.location)
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
 

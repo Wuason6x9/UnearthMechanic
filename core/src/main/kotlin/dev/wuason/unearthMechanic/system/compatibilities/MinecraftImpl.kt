@@ -11,6 +11,7 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.utils.Utils
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -111,6 +112,24 @@ class MinecraftImpl(
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
         else if (stage is IFurnitureStage) {
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
