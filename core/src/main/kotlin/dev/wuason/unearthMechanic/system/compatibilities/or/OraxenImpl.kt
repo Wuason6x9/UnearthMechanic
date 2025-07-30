@@ -9,6 +9,7 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
+import dev.wuason.unearthMechanic.system.compatibilities.nexo.NexoImpl
 import dev.wuason.unearthMechanic.utils.Utils
 import io.th0rgal.oraxen.api.OraxenBlocks
 import io.th0rgal.oraxen.api.OraxenFurniture
@@ -31,6 +32,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import java.util.Collections
 import java.util.UUID
 
 class OraxenImpl(
@@ -42,18 +44,23 @@ class OraxenImpl(
     pluginName,
     adapterComp
 ) {
-    private val removingMap = mutableSetOf<UUID>()
+    private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
 
-    override fun isRemoving(uuid: UUID): Boolean {
-        return removingMap.contains(uuid)
+    override fun isRemoving(location: Location): Boolean {
+        return removedLocations.contains(location)
     }
 
-    override fun setRemoving(uuid: UUID) {
-        removingMap.add(uuid)
+    override fun setRemoving(location: Location) {
+        removedLocations.add(location)
     }
 
-    override fun clearRemoving(uuid: UUID) {
-        removingMap.remove(uuid)
+    override fun clearRemoving(location: Location) {
+        removedLocations.remove(location)
+    }
+
+    companion object {
+        private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
+        val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
@@ -75,9 +82,9 @@ class OraxenImpl(
         return null
     }
 
-    override fun isValid(location: Location): Boolean {
-        val world = location.world ?: return false
-        val nearby = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+    override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
+        val world = loc.world ?: return false
+        val nearby = world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
 
         for (entity in nearby) {
             try {
@@ -90,7 +97,7 @@ class OraxenImpl(
             }
         }
 
-        if (location.block.type != org.bukkit.Material.AIR) return true
+        if (loc.block.type != org.bukkit.Material.AIR) return true
 
         return false
     }
@@ -123,22 +130,15 @@ class OraxenImpl(
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
-        if (isRemoving(event.baseEntity.uniqueId)) {
-            event.isCancelled = true
-            return
+        if (event.hand == EquipmentSlot.HAND) {
+            stageManager.interact(
+                event.player,
+                getPath(event.mechanic.itemID),
+                event.baseEntity.location,
+                event,
+                this
+            )
         }
-
-        Bukkit.getScheduler().runTaskLater(core, Runnable {
-            if (event.hand == EquipmentSlot.HAND) {
-                stageManager.interact(
-                    event.player,
-                    getPath(event.mechanic.itemID),
-                    event.baseEntity.location,
-                    event,
-                    this
-                )
-            }
-        }, 2L)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -153,20 +153,10 @@ class OraxenImpl(
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
-        val uuid = event.baseEntity.uniqueId
-
-        if (isRemoving(uuid)) {
-            event.isCancelled = true
-            return
-        }
-
-        setRemoving(uuid)
+        val loc = event.baseEntity.location.block.location
 
         StageData.removeStageData(event.baseEntity.location)
-
-        Bukkit.getScheduler().runTaskLater(core, Runnable {
-            clearRemoving(uuid)
-        }, 2L)
+        setRemoving(loc)
     }
 
 
@@ -209,7 +199,9 @@ class OraxenImpl(
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
-            handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            }, 2L)
         }
     }
 
@@ -234,10 +226,33 @@ class OraxenImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        if(isRemoving(loc.block.location)){
+            if(!stageManager.activeSequences.contains(loc.block.location)){
+                clearRemoving(loc.block.location)
+                }
+            return
+        }
         if (event is OraxenFurnitureInteractEvent) {
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
             placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
+
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                if(!stageManager.activeSequences.contains(event.baseEntity.location.block.location)){
+                    clearRemoving(event.baseEntity.location.block.location)
+                }
+            }, 5L)
         } else {
+            // Sequence System
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             placeFurniture(itemAdapterData, loc)
         }
     }
@@ -256,10 +271,15 @@ class OraxenImpl(
             loc.block.type = org.bukkit.Material.AIR
         }
         if (event is OraxenFurnitureInteractEvent) {
+            event.baseEntity?.let { entity ->
+                rotationMap[entity.location] = Pair(entity.location.yaw, entity.location.pitch)
+            }
+            setRemoving(event.baseEntity.location.block.location)
+
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
         }
 
-        val nearby = loc.world.getNearbyEntities(loc, 1.0, 1.0, 1.0)
+        val nearby = loc.world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
 
         for (entity in nearby) {
             try {
@@ -273,7 +293,8 @@ class OraxenImpl(
         }
 
         if (loc.block.type != org.bukkit.Material.AIR) {
-            OraxenBlocks.remove(loc,player)
+            //OraxenBlocks.remove(loc,player)
+            breakBlock(loc,player)
         }
     }
 

@@ -58,7 +58,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
     private val animator: AnimationManager = AnimationManager(core)
 
-    private val activeSequences = mutableSetOf<Location>()
+    public val activeSequences = mutableSetOf<Location>()
     private val scheduledTasks = mutableMapOf<Location, MutableList<BukkitTask>>()
 
     init {
@@ -328,76 +328,62 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         val furnitureUuid = compatibility.getFurnitureUUID(loc)
 
-        /*
-        if(furnitureUuid != null){
-            if(compatibility.isRemoving(furnitureUuid)){
-                Bukkit.getConsoleSender().sendMessage("[UM] Cancelado por un removing $furnitureUuid en $currentTick")
-                return
+        if ((validation != null && !validation.validate())
+            || !toolUsed.isOriginalItem() || !toolUsed.isValid()
+            || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
+
+        val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
+        Bukkit.getPluginManager().callEvent(applyStageEvent)
+        if (applyStageEvent.isCancelled) return
+
+        if (validation == null) {
+            if (event is Cancellable) {
+                event.isCancelled = true
             }
-            compatibility.setRemoving(furnitureUuid)
-        }*/
-
-        try {
-            if ((validation != null && !validation.validate())
-                || !toolUsed.isOriginalItem() || !toolUsed.isValid()
-                || !StageData.compare(StageData(loc, stage.getStage(), generic), loc)) return
-
-            val applyStageEvent: ApplyStageEvent = ApplyStageEvent(player, compatibility, event, loc, toolUsed, generic, stage)
-            Bukkit.getPluginManager().callEvent(applyStageEvent)
-            if (applyStageEvent.isCancelled) return
-
-            if (validation == null) {
-                if (event is Cancellable) {
-                    event.isCancelled = true
-                }
-            }
-
-            Features.getFeatures().forEach { feature ->
-                try {
-                    feature.onApply(player, compatibility, event, loc, toolUsed, stage, generic)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-
-            stage.getAdapterData()?.let {
-                if (isSimilarCompatibility(it, compatibility)) {
-                    if (!compatibility.isValid(loc)) {
-                        compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                        Bukkit.getConsoleSender().sendMessage("[UM] handleRemove aplicado para $furnitureUuid en $currentTick")
-                    }
-
-                    //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para $furnitureUuid en $currentTick")
-                    Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
-                    compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
-
-                } else {
-                    val c: ICompatibility =
-                        getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
-                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                    Bukkit.getConsoleSender().sendMessage("[UM] handleRemove2 aplicado para $furnitureUuid en $currentTick")
-
-                    c.handleStage(player, it, event, loc, toolUsed, generic, stage)
-                    Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
-                    //Bukkit.getConsoleSender().sendMessage("[UM] handleStage2 aplicado para $furnitureUuid en $currentTick")
-                }
-            }
-
-            if (stage is Stage && stage.getSequenceStages()?.isNotEmpty() == true) {
-                handleSequence(player, compatibility, loc, toolUsed, generic, stage)
-            }
-
-            if (stage.isRemove() || generic.isLastStage(stage)) {
-                if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
-                StageData.removeStageData(loc)
-                return
-            }
-
-            StageData.saveStageData(loc, StageData(loc, stage.getStage() + 1, generic))
-
-        } finally {
-            if (furnitureUuid != null) compatibility.clearRemoving(furnitureUuid)
         }
+
+        Features.getFeatures().forEach { feature ->
+            try {
+                feature.onApply(player, compatibility, event, loc, toolUsed, stage, generic)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        stage.getAdapterData()?.let {
+            if (isSimilarCompatibility(it, compatibility)) {
+                if (!compatibility.isValid(loc, stage.getAdapterData()?.id)) {
+                    compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                    //Bukkit.getConsoleSender().sendMessage("[UM] handleRemove aplicado para $furnitureUuid en $currentTick")
+                }
+
+                //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para $furnitureUuid en $currentTick")
+                //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
+                compatibility.handleStage(player, it, event, loc, toolUsed, generic, stage)
+
+            } else {
+                val c: ICompatibility =
+                    getCompatibilityByAdapterId(it) ?: throw NullPointerException("Compatibility not found for $it")
+                compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+                //Bukkit.getConsoleSender().sendMessage("[UM] handleRemove2 aplicado para $furnitureUuid en $currentTick")
+
+                c.handleStage(player, it, event, loc, toolUsed, generic, stage)
+                //Bukkit.getConsoleSender().sendMessage("[UM] handleStage aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
+                //Bukkit.getConsoleSender().sendMessage("[UM] handleStage2 aplicado para $furnitureUuid en $currentTick")
+            }
+        }
+
+        if (stage is Stage && stage.getSequenceStages()?.isNotEmpty() == true) {
+            handleSequence(player, compatibility, loc, toolUsed, generic, stage)
+        }
+
+        if (stage.isRemove() || generic.isLastStage(stage)) {
+            if (stage.isRemove()) compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
+            StageData.removeStageData(loc)
+            return
+        }
+
+        StageData.saveStageData(loc, StageData(loc, stage.getStage() + 1, generic))
     }
 
     var lastSequenceStage = arrayOfNulls<IStage>(1)
@@ -423,9 +409,9 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
             val task = Bukkit.getScheduler().runTaskLater(core, Runnable {
                 if (!activeSequences.contains(loc)) return@Runnable
 
-                if (!compatibility.isValid(loc)) {
+                if (!compatibility.isValid(loc,stage.getAdapterData()?.id)) {
                     //Bukkit.getConsoleSender().sendMessage("[UM] Secuencia cancelada en $loc porque ya no existe.")
-                    cancelSequence(loc)
+                    cancelSequence(compatibility,loc)
                     return@Runnable
                 }
 
@@ -453,9 +439,17 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                     val nextStage = stage.getStage() + 1
                     if (nextStage < generic.getStages().size) {
                         StageData.saveStageData(loc, StageData(loc, nextStage, generic))
+
+                        compatibility.getFurnitureUUID(loc).let { furnitureuuid ->
+                            furnitureuuid?.let { compatibility.clearRemoving(loc.block.location) }
+                        }
                     } else {
                         //StageData.saveStageData(loc, StageData(loc, stage.getStage(), generic))
                         StageData.removeStageData(loc)
+
+                        compatibility.getFurnitureUUID(loc).let { furnitureuuid ->
+                            furnitureuuid?.let { compatibility.clearRemoving(loc.block.location) }
+                        }
                     }
                 }
             }, delayTicks)
@@ -478,7 +472,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
 
         stage.getAdapterData()?.let {
             if (isSimilarCompatibility(it, compatibility)) {
-                if (!compatibility.isValid(loc)) {
+                if (!compatibility.isValid(loc,stage.getAdapterData()?.id)) {
                     compatibility.handleRemove(player, event, loc, toolUsed, generic, stage)
                     //Bukkit.getConsoleSender().sendMessage("[UM] handleRemove aplicado para ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id} en ${Bukkit.getCurrentTick()}")
                 }
@@ -501,11 +495,15 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     }
 
 
-    fun cancelSequence(loc: Location) {
+    fun cancelSequence(compatibility: ICompatibility, loc: Location) {
         scheduledTasks[loc]?.forEach { it.cancel() }
         scheduledTasks.remove(loc)
         activeSequences.remove(loc)
-        Bukkit.getConsoleSender().sendMessage("[UM] Secuencia cancelada en $loc.")
+        //Bukkit.getConsoleSender().sendMessage("[UM] Secuencia cancelada en $loc.")
+
+        compatibility.getFurnitureUUID(loc).let { furnitureuuid ->
+            furnitureuuid?.let { compatibility.clearRemoving(loc.block.location) }
+        }
     }
 
     override fun getCompatibilitiesLoaded(): MutableList<ICompatibility> {

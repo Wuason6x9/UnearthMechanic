@@ -34,25 +34,25 @@ class MinecraftImpl(
     pluginName,
     adapterComp
 ) {
-    private val removingMap = mutableSetOf<UUID>()
+    private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
 
-    override fun isRemoving(uuid: UUID): Boolean {
-        return removingMap.contains(uuid)
+    override fun isRemoving(location: Location): Boolean {
+        return removedLocations.contains(location)
     }
 
-    override fun setRemoving(uuid: UUID) {
-        removingMap.add(uuid)
+    override fun setRemoving(location: Location) {
+        removedLocations.add(location)
     }
 
-    override fun clearRemoving(uuid: UUID) {
-        removingMap.remove(uuid)
+    override fun clearRemoving(location: Location) {
+        removedLocations.remove(location)
     }
 
     override fun getFurnitureUUID(location: Location): UUID? {
         return null
     }
 
-    override fun isValid(location: Location): Boolean {
+    override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
         return false
     }
 

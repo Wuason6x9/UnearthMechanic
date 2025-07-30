@@ -153,22 +153,22 @@ abstract class ICompatibility(
      * @param location The location to validate.
      * @return true if valid, false otherwise.
      */
-    open fun isValid(location: Location): Boolean = true
+    open fun isValid(loc: Location, expectedAdapterId: String?): Boolean = true
 
     /**
      * Indicates if the current given UUID is in the process of being removed (e.g., a furniture entity).
      */
-    abstract fun isRemoving(uuid: UUID): Boolean
+    abstract fun isRemoving(location: Location): Boolean
 
     /**
      * Marks the given UUID as being removed, to prevent duplicate removal operations.
      */
-    abstract fun setRemoving(uuid: UUID)
+    abstract fun setRemoving(location: Location)
 
     /**
      * Clears the removing mark for the given UUID after removal has completed.
      */
-    abstract fun clearRemoving(uuid: UUID)
+    abstract fun clearRemoving(location: Location)
 
     /**
      * Retrieves the UUID of a furniture entity at the given location, if present.
