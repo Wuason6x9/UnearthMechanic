@@ -124,9 +124,11 @@ class ItemsAdderImpl(
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        /*event.bukkitEntity?.let { entity ->
-            rotationMap[entity.location] = Pair(entity.location.yaw, entity.location.pitch)
-        }*/
+        if (stageManager.isTransitioning(event.bukkitEntity.location.block.location)) {
+            //Bukkit.getConsoleSender().sendMessage("[DEBUG] Bloqueado por transición en ${event.bukkitEntity.location.block.location}")
+            event.isCancelled = true
+            return
+        }
 
         val uuid = event.bukkitEntity.uniqueId
         //val currentTick = Bukkit.getCurrentTick().toLong()
@@ -151,6 +153,12 @@ class ItemsAdderImpl(
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
+        if (stageManager.isTransitioning(event.bukkitEntity.location.block.location)) {
+            //Bukkit.getConsoleSender().sendMessage("[DEBUG] Bloqueado por transición en ${event.bukkitEntity.location.block.location}")
+            event.isCancelled = true
+            return
+        }
+
         if (stageManager.activeSequences.contains(event.bukkitEntity.location.block.location)) {
             //Bukkit.getConsoleSender().sendMessage("[UM] onFurnitureBreak Cancelado por SECUENCIA en ${event.bukkitEntity.location}")
             stageManager.cancelSequence(this, event.bukkitEntity.location.block.location)
@@ -270,31 +278,33 @@ class ItemsAdderImpl(
         if(isRemoving(loc.block.location)){
             if(!stageManager.activeSequences.contains(loc.block.location)){
                 clearRemoving(loc.block.location) }
-
             //Bukkit.getConsoleSender().sendMessage("[UM] Bloqueada recolocación definitiva en ${loc.block.location}")
             return
         }
 
         if (event is FurnitureInteractEvent) {
-            val uuid = event.bukkitEntity.uniqueId
-
-            event.isCancelled = true
 
             val entityEvent: Entity = event.bukkitEntity
             if(!entityEvent.isValid) {
                 //Bukkit.getConsoleSender().sendMessage(" NO ES VALIDO EL FURNITURE" +loc)
                 return
             }
-            event.furniture?.remove(false)
 
             //if(isRemoving(loc.block.location)) return
             if(isRemoving(loc.block.location)){
                 if(!stageManager.activeSequences.contains(event.bukkitEntity.location.block.location)){
                     clearRemoving(event.bukkitEntity.location.block.location)
                 }
-
                 //Bukkit.getConsoleSender().sendMessage("Spawn cancelado en $loc - adapter ${itemAdapterData.id}")
                 return
+            }
+
+            if(isValid(loc, itemAdapterData.toString())){
+                event.furniture?.remove(false)
+                event.bukkitEntity.remove()
+                breakBlock(event.bukkitEntity.location)
+            }else{
+                breakBlock(event.bukkitEntity.location)
             }
             CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
                 //Bukkit.getConsoleSender().sendMessage("[IA] spawn furniture at $loc - adapter ${itemAdapterData.id}")
@@ -322,8 +332,15 @@ class ItemsAdderImpl(
             // Sequence System
             val rotation = rotationMap.remove(loc)
             val cachedFrameRotation = itemFrameRotationMap[loc]
+
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
                 val entity: Entity = customFurniture.entity ?: return
+                //Bukkit.getConsoleSender().sendMessage("[IA] spawn Sequence $loc - adapter ${itemAdapterData.id}")
 
                 if (rotation != null) entity.setRotation(rotation.first, rotation.second)
                 if (cachedFrameRotation != null && entity is ItemFrame) {

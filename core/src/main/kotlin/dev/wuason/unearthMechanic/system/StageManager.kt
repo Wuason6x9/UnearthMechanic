@@ -61,6 +61,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     public val activeSequences = mutableSetOf<Location>()
     private val scheduledTasks = mutableMapOf<Location, MutableList<BukkitTask>>()
 
+    private val transitioningLocations = mutableSetOf<Location>()
+    fun isTransitioning(location: Location) = transitioningLocations.contains(location)
+    fun addTransitioning(location: Location) = transitioningLocations.add(location)
+    fun removeTransitioning(location: Location) = transitioningLocations.remove(location)
+
     init {
 
         compatibilitiesLoaded.add(MinecraftImpl("Vanilla", core, this, Adapter.getAdapterByName("Vanilla")))
@@ -398,7 +403,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
     ) {
         val sequenceStages = stage.getSequenceStages()!!
 
-        Bukkit.getConsoleSender().sendMessage("[UM] Stage ${stage.getStage()} tiene ${sequenceStages.size} pasos de sequence.")
+        //Bukkit.getConsoleSender().sendMessage("[UM] Stage ${stage.getStage()} tiene ${sequenceStages.size} pasos de sequence.")
 
         val tasks = mutableListOf<BukkitTask>()
         activeSequences.add(loc)
@@ -432,7 +437,7 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 lastSequenceStage[0] = sequenceStage
 
                 if (delayTicks == sequenceStages.keys.maxOrNull()) {
-                    Bukkit.getConsoleSender().sendMessage("[UM] Secuencia finalizada en $loc.")
+                    //Bukkit.getConsoleSender().sendMessage("[UM] Secuencia finalizada en $loc.")
                     activeSequences.remove(loc)
                     scheduledTasks.remove(loc)
 

@@ -135,6 +135,11 @@ class NexoImpl(
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractFurniture(event: NexoFurnitureInteractEvent) {
+        if (stageManager.isTransitioning(event.baseEntity.location.block.location)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -160,6 +165,10 @@ class NexoImpl(
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: NexoFurnitureBreakEvent) {
         val loc = event.baseEntity.location.block.location
+        if (stageManager.isTransitioning(loc)) {
+            event.isCancelled = true
+            return
+        }
 
         removeStageData(loc)
         setRemoving(loc)

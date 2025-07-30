@@ -123,17 +123,20 @@ class CraftEngineImpl(
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        Bukkit.getScheduler().runTaskLater(core, Runnable {
-            if (event.furniture().baseEntity() != null) {
-                val adapterId = "ce:" + event.furniture().id()
-                stageManager.interact(
-                    event.player,
-                    adapterId,
-                    event.location(),
-                    event,
-                    this)
-            }
-        }, 2L)
+        if (stageManager.isTransitioning(event.furniture().baseEntity().location.block.location)) {
+            event.isCancelled = true
+            return
+        }
+
+        if (event.furniture().baseEntity() != null) {
+            val adapterId = "ce:" + event.furniture().id()
+            stageManager.interact(
+                event.player,
+                adapterId,
+                event.location(),
+                event,
+                this)
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -143,6 +146,10 @@ class CraftEngineImpl(
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
+        if (stageManager.isTransitioning(event.furniture().baseEntity().location.block.location)) {
+            event.isCancelled = true
+            return
+        }
 
         val loc = event.furniture().baseEntity().location.block.location
 

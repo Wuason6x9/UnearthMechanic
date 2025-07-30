@@ -135,6 +135,11 @@ class OraxenImpl(
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
+        if (stageManager.isTransitioning(event.baseEntity.location.block.location)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -159,6 +164,10 @@ class OraxenImpl(
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
         val loc = event.baseEntity.location.block.location
+        if (stageManager.isTransitioning(loc)) {
+            event.isCancelled = true
+            return
+        }
 
         removeStageData(loc)
         setRemoving(loc)
