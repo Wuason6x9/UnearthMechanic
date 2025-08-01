@@ -1,5 +1,6 @@
 package dev.wuason.unearthMechanic.system.compatibilities
 
+import dev.lone.itemsadder.api.CustomFurniture
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
@@ -10,6 +11,7 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.utils.Utils
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -33,6 +35,27 @@ class MinecraftImpl(
     pluginName,
     adapterComp
 ) {
+    private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
+
+    override fun isRemoving(location: Location): Boolean {
+        return removedLocations.contains(location)
+    }
+
+    override fun setRemoving(location: Location) {
+        removedLocations.add(location)
+    }
+
+    override fun clearRemoving(location: Location) {
+        removedLocations.remove(location)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        return null
+    }
+
+    override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
+        return false
+    }
 
     @EventHandler
     fun onInteractBlock(event: PlayerInteractEvent) {
@@ -89,6 +112,24 @@ class MinecraftImpl(
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
         else if (stage is IFurnitureStage) {
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }

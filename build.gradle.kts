@@ -18,7 +18,7 @@ val targetJavaVersion = 21
 allprojects {
 
     project.group = "dev.wuason"
-    project.version = "0.1.12"
+    project.version = "0.1.12a"
 
     //apply kotlin jvm plugin
     apply(plugin = "kotlin")
@@ -50,6 +50,13 @@ allprojects {
         }
         maven("https://maven.devs.beer/") {
             name = "matteodev"
+        }
+
+        maven("https://jitpack.io") {
+            name = "jitpack"
+        }
+        maven("https://repo.momirealms.net/releases/") {
+            name = "craftengine-releases"
         }
         
     }
@@ -166,11 +173,16 @@ project(":core") {
 subprojects {
     dependencies {
         compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
-        compileOnly("com.github.Wuason6x9:mechanics:1.0.3.1")
+        compileOnly("com.github.Wuason6x9:mechanics:1.0.3.6")
         compileOnly("io.th0rgal:oraxen:1.189.0") // 1.174.0 supported version
         compileOnly("dev.lone:api-itemsadder:4.0.2-beta-release-11")
         compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12-SNAPSHOT")
         compileOnly("com.nexomc:nexo:0.4.0:dev")
+
+        compileOnly("net.momirealms:craft-engine-core:0.0.60")
+        compileOnly("net.momirealms:craft-engine-bukkit:0.0.60")
+
+        compileOnly("net.luckperms:api:5.4")
     }
 }
 

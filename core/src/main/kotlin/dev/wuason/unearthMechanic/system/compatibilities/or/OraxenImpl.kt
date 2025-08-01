@@ -9,16 +9,19 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
+import dev.wuason.unearthMechanic.system.compatibilities.nexo.NexoImpl
 import dev.wuason.unearthMechanic.utils.Utils
 import io.th0rgal.oraxen.api.OraxenBlocks
 import io.th0rgal.oraxen.api.OraxenFurniture
 import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureBreakEvent
 import io.th0rgal.oraxen.api.events.furniture.OraxenFurnitureInteractEvent
+import io.th0rgal.oraxen.api.events.furniture.OraxenFurniturePlaceEvent
 import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockBreakEvent
 import io.th0rgal.oraxen.api.events.noteblock.OraxenNoteBlockInteractEvent
 import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockBreakEvent
 import io.th0rgal.oraxen.api.events.stringblock.OraxenStringBlockInteractEvent
 import io.th0rgal.oraxen.utils.drops.Drop
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -30,6 +33,8 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import java.util.Collections
+import java.util.UUID
 
 class OraxenImpl(
     pluginName: String,
@@ -40,6 +45,67 @@ class OraxenImpl(
     pluginName,
     adapterComp
 ) {
+    private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
+
+    override fun isRemoving(location: Location): Boolean {
+        return removedLocations.contains(location)
+    }
+
+    override fun setRemoving(location: Location) {
+        removedLocations.add(location)
+    }
+
+    override fun clearRemoving(location: Location) {
+        removedLocations.remove(location)
+    }
+
+    companion object {
+        private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
+        val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        val world = location.world ?: return null
+
+        val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+        for (entity in entities) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null) {
+                    return entity.uniqueId
+                }
+            } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
+                continue
+            }
+        }
+
+        return null
+    }
+
+    override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
+        val world = loc.world ?: return false
+        val nearby = world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+
+        for (entity in nearby) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    return true
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) return true
+
+        return false
+    }
 
     @EventHandler
     fun onInteractBlock(event: OraxenNoteBlockInteractEvent) {
@@ -69,6 +135,11 @@ class OraxenImpl(
 
     @EventHandler
     fun onInteractFurniture(event: OraxenFurnitureInteractEvent) {
+        if (stageManager.isTransitioning(event.baseEntity.location.block.location)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -92,8 +163,21 @@ class OraxenImpl(
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onFurnitureBreak(event: OraxenFurnitureBreakEvent) {
-        StageData.removeStageData(event.baseEntity.location)
+        val loc = event.baseEntity.location.block.location
+        if (stageManager.isTransitioning(loc)) {
+            event.isCancelled = true
+            return
+        }
+
+        removeStageData(loc)
+        setRemoving(loc)
     }
+
+    @EventHandler
+    fun onFurniturePlace(event: OraxenFurniturePlaceEvent) {
+        clearRemoving(event.baseEntity.location.block.location)
+    }
+
 
 
     private fun placeBlock(itemAdapterData: AdapterData, location: Location) {
@@ -135,6 +219,24 @@ class OraxenImpl(
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
@@ -160,10 +262,33 @@ class OraxenImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        if(isRemoving(loc.block.location)){
+            if(!stageManager.activeSequences.contains(loc.block.location)){
+                clearRemoving(loc.block.location)
+            }
+            return
+        }
         if (event is OraxenFurnitureInteractEvent) {
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
             placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
+
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                if(!stageManager.activeSequences.contains(event.baseEntity.location.block.location)){
+                    clearRemoving(event.baseEntity.location.block.location)
+                }
+            }, 5L)
         } else {
+            // Sequence System
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             placeFurniture(itemAdapterData, loc)
         }
     }
@@ -177,10 +302,36 @@ class OraxenImpl(
         stage: IStage
     ) {
         if (event is OraxenNoteBlockInteractEvent || event is OraxenStringBlockInteractEvent) {
+            OraxenBlocks.remove(loc,player)
+
             loc.block.type = org.bukkit.Material.AIR
         }
         if (event is OraxenFurnitureInteractEvent) {
+            event.baseEntity?.let { entity ->
+                rotationMap[entity.location] = Pair(entity.location.yaw, entity.location.pitch)
+            }
+            setRemoving(event.baseEntity.location.block.location)
+
+            removeStageData(event.baseEntity.location.block.location)
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
+        }
+
+        val nearby = loc.world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+
+        for (entity in nearby) {
+            try {
+                val furniture = OraxenFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    OraxenFurniture.remove(loc,player)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) {
+            //OraxenBlocks.remove(loc,player)
+            breakBlock(loc,player)
         }
     }
 

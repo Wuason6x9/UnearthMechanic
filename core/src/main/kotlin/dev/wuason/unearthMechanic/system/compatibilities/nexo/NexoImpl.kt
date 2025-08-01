@@ -8,10 +8,10 @@ import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockBreakE
 import com.nexomc.nexo.api.events.custom_block.stringblock.NexoStringBlockInteractEvent
 import com.nexomc.nexo.api.events.furniture.NexoFurnitureBreakEvent
 import com.nexomc.nexo.api.events.furniture.NexoFurnitureInteractEvent
+import com.nexomc.nexo.api.events.furniture.NexoFurniturePlaceEvent
 import com.nexomc.nexo.utils.drops.Drop
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
-import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
 import dev.wuason.unearthMechanic.config.*
 import dev.wuason.unearthMechanic.system.ILiveTool
@@ -31,6 +31,8 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.Action
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import java.util.Collections
+import java.util.UUID
 
 class NexoImpl(
     pluginName: String,
@@ -41,6 +43,69 @@ class NexoImpl(
     pluginName,
     adapterComp
 ) {
+
+    private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
+
+    override fun isRemoving(location: Location): Boolean {
+        return removedLocations.contains(location)
+    }
+
+    override fun setRemoving(location: Location) {
+        removedLocations.add(location)
+    }
+
+    override fun clearRemoving(location: Location) {
+        removedLocations.remove(location)
+    }
+
+    companion object {
+        private val rotationMap = mutableMapOf<Location, Pair<Float, Float>>()
+        val itemFrameRotationMap = mutableMapOf<Location, org.bukkit.Rotation>()
+    }
+
+    fun removeStageData(location: Location){
+        StageData.removeStageData(location)
+    }
+
+    override fun getFurnitureUUID(location: Location): UUID? {
+        val world = location.world ?: return null
+
+        val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
+        for (entity in entities) {
+            try {
+                val furniture = NexoFurniture.isFurniture(entity)
+                if (furniture != null) {
+                    return entity.uniqueId
+                }
+            } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
+                continue
+            }
+        }
+
+        return null
+    }
+
+    override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
+        val world = loc.world ?: return false
+        val nearby = world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+
+        for (entity in nearby) {
+            try {
+                val furniture = NexoFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    return true
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) return true
+
+        return false
+    }
+
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractBlock(event: NexoNoteBlockInteractEvent) {
@@ -70,6 +135,11 @@ class NexoImpl(
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteractFurniture(event: NexoFurnitureInteractEvent) {
+        if (stageManager.isTransitioning(event.baseEntity.location.block.location)) {
+            event.isCancelled = true
+            return
+        }
+
         if (event.hand == EquipmentSlot.HAND) {
             stageManager.interact(
                 event.player,
@@ -79,6 +149,7 @@ class NexoImpl(
                 this
             )
         }
+
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -91,9 +162,21 @@ class NexoImpl(
         StageData.removeStageData(event.block)
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: NexoFurnitureBreakEvent) {
-        StageData.removeStageData(event.baseEntity.location)
+        val loc = event.baseEntity.location.block.location
+        if (stageManager.isTransitioning(loc)) {
+            event.isCancelled = true
+            return
+        }
+
+        removeStageData(loc)
+        setRemoving(loc)
+    }
+
+    @EventHandler
+    fun onFurniturePlace(event: NexoFurniturePlaceEvent) {
+        clearRemoving(event.baseEntity.location.block.location)
     }
 
 
@@ -136,6 +219,24 @@ class NexoImpl(
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+            }, 2L)
+        }
+    }
+
+    override fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    ) {
+        if (stage is IBlockStage) {
+            handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
+        } else if (stage is IFurnitureStage) {
             handleFurnitureStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         }
     }
@@ -161,10 +262,33 @@ class NexoImpl(
         generic: IGeneric,
         stage: IStage
     ) {
+        if(isRemoving(loc.block.location)){
+            if(!stageManager.activeSequences.contains(loc.block.location)){
+                clearRemoving(loc.block.location)
+                }
+            return
+        }
         if (event is NexoFurnitureInteractEvent) {
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
             placeFurniture(itemAdapterData, loc, event.baseEntity.facing, event.baseEntity.location.yaw)
+
+            Bukkit.getScheduler().runTaskLater(core, Runnable {
+                if(!stageManager.activeSequences.contains(event.baseEntity.location.block.location)){
+                    clearRemoving(event.baseEntity.location.block.location)
+                }
+            }, 5L)
         } else {
+            // Sequence System
+            if(isRemoving(loc.block.location)){
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
+                return
+            }
             placeFurniture(itemAdapterData, loc)
         }
     }
@@ -181,7 +305,30 @@ class NexoImpl(
             loc.block.type = org.bukkit.Material.AIR
         }
         if (event is NexoFurnitureInteractEvent) {
+            event.baseEntity?.let { entity ->
+                rotationMap[entity.location] = Pair(entity.location.yaw, entity.location.pitch)
+            }
+            setRemoving(event.baseEntity.location.block.location)
+
+            removeStageData(event.baseEntity.location.block.location)
             breakFurniture(event.baseEntity, player, event.mechanic.itemID)
+        }
+
+        val nearby = loc.world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+
+        for (entity in nearby) {
+            try {
+                val furniture = NexoFurniture.isFurniture(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    NexoFurniture.remove(entity)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+
+        if (loc.block.type != org.bukkit.Material.AIR) {
+            NexoBlocks.remove(loc)
         }
     }
 

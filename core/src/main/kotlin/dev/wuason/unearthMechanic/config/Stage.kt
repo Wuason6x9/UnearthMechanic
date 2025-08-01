@@ -22,7 +22,8 @@ import kotlin.random.Random
 open class Stage(
     private val stage: Int, private val adapterData: AdapterData?, private val drops: List<Drop>, private val remove: Boolean, private val removeItemMainHand: Boolean,
     private val durabilityToRemove: Int,
-    private val usagesIaToRemove: Int, private val onlyOneDrop: Boolean,
+    private val usagesIaToRemove: Int, private val permissionStage: String,
+    private val onlyOneDrop: Boolean,
     private val reduceItemHand: Int, private val items: List<Item>, private val onlyOneItem: Boolean, private val sounds: List<Sound>,
     private val delay: Long, private val toolAnimDelay: Boolean
 ) : IStage {
@@ -45,6 +46,10 @@ open class Stage(
 
     override fun getDurabilityToRemove(): Int {
         return durabilityToRemove
+    }
+
+    override fun getPermissionStage(): String {
+        return permissionStage
     }
 
     override fun getAdapterData(): AdapterData? {
@@ -109,5 +114,15 @@ open class Stage(
         } else {
             return -1
         }
+    }
+
+    private var sequenceStages: Map<Long, Stage>? = null
+
+    fun setSequenceStages(sequence: Map<Long, Stage>) {
+        this.sequenceStages = sequence
+    }
+
+    fun getSequenceStages(): Map<Long, Stage>? {
+        return sequenceStages
     }
 }

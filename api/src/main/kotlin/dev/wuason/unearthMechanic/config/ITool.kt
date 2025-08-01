@@ -61,6 +61,13 @@ interface ITool {
     fun getAnimation(): IAnimation?
 
     /**
+     * Retrieves the replacement item identifier when the tool is using
+     *
+     * @return The permission of the item to replace the broken tool, or null if no replacement is specified.
+     */
+    fun getToolPermission(): String?
+
+    /**
      * Retrieves the delay in milliseconds associated with the tool.
      *
      * @return The delay in milliseconds as a `Long`.

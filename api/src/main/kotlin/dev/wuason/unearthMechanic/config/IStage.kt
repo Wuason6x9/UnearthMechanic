@@ -40,6 +40,13 @@ interface IStage {
     fun getUsagesIaToRemove(): Int
 
     /**
+     * The permission required to advance from stage
+     *
+     * @return returns the permission value set in the configuration
+     */
+    fun getPermissionStage(): String
+
+    /**
      * Determines if only one drop is allowed in the current stage.
      *
      * @return true if only one drop is permitted; false otherwise.

@@ -11,10 +11,12 @@ import dev.wuason.libs.boostedyaml.settings.updater.UpdaterSettings
 import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.utils.Utils.Companion.toAdapter
+import org.bukkit.Bukkit
 import java.io.File
 import java.lang.reflect.Constructor
 import java.util.Locale
 import kotlin.jvm.optionals.getOrNull
+import kotlin.let
 
 class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
 
@@ -93,6 +95,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         val removeItemMainHand: Boolean = sectionStage.getBoolean("remove_item_main_hand", false)
                         val durabilityToRemove = sectionStage.getInt("reduce_durability", 0)
                         val usagesIaToRemove = sectionStage.getInt("reduce_usages_ia", 0)
+                        val permissionStage = sectionStage.getString("permission", "")
                         val onlyOneDrop = sectionStage.getBoolean("only_one_drop", false)
                         val onlyOneItem = sectionStage.getBoolean("only_one_add", false)
                         val reduceItemMainHand: Int = sectionStage.getInt("reduce_item_main_hand", 0)
@@ -120,6 +123,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                                 removeItemMainHand,
                                 durabilityToRemove,
                                 usagesIaToRemove,
+                                permissionStage,
                                 onlyOneDrop,
                                 reduceItemMainHand,
                                 items,
@@ -136,6 +140,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             removeItemMainHand,
                             durabilityToRemove,
                             usagesIaToRemove,
+                            permissionStage,
                             onlyOneDrop,
                             reduceItemMainHand,
                             items,
@@ -146,6 +151,44 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                         )
 
                         stages.add(stage)
+
+                        val sectionSequence: Section? = sectionStage.getSection("sequence")
+                        if (sectionSequence != null && stage is Stage) {
+                            val sequenceStages: MutableMap<Long, Stage> = mutableMapOf()
+
+                            for (key in sectionSequence.getRoutesAsStrings(false)) {
+                                val delay = key.toLongOrNull() ?: continue
+                                val sectionSubStage = sectionSequence.getSection(key) ?: continue
+
+                                var stageTypeSeq: StageType = StageType.valueOf(type.name.uppercase(Locale.ENGLISH))
+                                var itemStageIdSeq: String? = null
+                                for (t in StageType.values()) {
+                                    sectionSubStage.getString("${t.getRoute()}_id")?.let {
+                                        stageTypeSeq = t
+                                        itemStageIdSeq = it
+                                    }
+                                }
+
+                                val adapterDataSeq: AdapterData? = itemStageIdSeq?.let { Adapter.getAdapterData(it).getOrNull() }
+
+                                val subStage: Stage = stageTypeSeq.getClazz().declaredConstructors[0].newInstance(
+                                    stages.size,
+                                    adapterDataSeq,
+                                    emptyList<Drop>(),
+                                    false, false, 0, 0, "", false, 0,
+                                    emptyList<Item>(), false, emptyList<Sound>(), 0L, false
+                                ) as Stage
+
+                                sequenceStages[delay] = subStage
+                            }
+
+                            /*Bukkit.getConsoleSender().sendMessage("[UM] Cargando sequence en stage ${stage.getStage()} del id '$id' con ${sequenceStages.size} paso(s).")
+                            sequenceStages.forEach { (delay, subStage) ->
+                                Bukkit.getConsoleSender().sendMessage("[UM] - Paso con delay $delay ticks, ${subStage.getAdapterData()?.type}:${subStage.getAdapterData()?.id}")
+                            }*/
+
+                            stage.setSequenceStages(sequenceStages)
+                        }
 
                     }
 
@@ -167,6 +210,7 @@ class ConfigManager(private val core: UnearthMechanic) : IConfigManager {
                             false,
                             0,
                             0,
+                            "",
                             false,
                             0,
                             listOf<Item>(),

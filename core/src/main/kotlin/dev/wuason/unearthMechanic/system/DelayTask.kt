@@ -24,6 +24,7 @@ class DelayTask(
     private var tick: Long = 0
 
     fun start() {
+        stageManager.addTransitioning(loc)
         stageManager.getDelays()[loc] = runTaskTimer(UnearthMechanic.getInstance(), 0, 1)
     }
 
@@ -44,6 +45,7 @@ class DelayTask(
 
     override fun cancel() {
         stageManager.getDelays().remove(loc)
+        stageManager.removeTransitioning(loc)
         super.cancel()
     }
 

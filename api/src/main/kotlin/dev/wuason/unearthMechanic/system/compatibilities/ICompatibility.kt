@@ -9,10 +9,12 @@ import dev.wuason.unearthMechanic.system.ILiveTool
 import dev.wuason.unearthMechanic.system.IStageManager
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.Listener
 import org.bukkit.inventory.ItemStack
+import java.util.UUID
 
 /**
  * Interface representing compatibility handling in the system. This interface must be implemented
@@ -93,6 +95,16 @@ abstract class ICompatibility(
         stage: IStage
     )
 
+    abstract fun handleSequenceStage(
+        player: Player,
+        itemAdapterData: AdapterData,
+        event: Event,
+        loc: Location,
+        toolUsed: ILiveTool,
+        generic: IGeneric,
+        stage: IStage
+    )
+
     /**
      * Handles the removal of an item from a specific stage when an event occurs.
      *
@@ -143,6 +155,38 @@ abstract class ICompatibility(
      * It can be used to perform any necessary initialization procedures.
      */
     open fun onLoad() {}
+
+    /**
+     * Checks if the block or furniture at the given location is still valid for processing sequences.
+     * Default implementation always returns true.
+     *
+     * @param location The location to validate.
+     * @return true if valid, false otherwise.
+     */
+    open fun isValid(loc: Location, expectedAdapterId: String?): Boolean = true
+
+    /**
+     * Indicates if the current given UUID is in the process of being removed (e.g., a furniture entity).
+     */
+    abstract fun isRemoving(location: Location): Boolean
+
+    /**
+     * Marks the given UUID as being removed, to prevent duplicate removal operations.
+     */
+    abstract fun setRemoving(location: Location)
+
+    /**
+     * Clears the removing mark for the given UUID after removal has completed.
+     */
+    abstract fun clearRemoving(location: Location)
+
+    /**
+     * Retrieves the UUID of a furniture entity at the given location, if present.
+     *
+     * @param location The location to check.
+     * @return The UUID of the furniture entity, or null if none found.
+     */
+    abstract fun getFurnitureUUID(location: Location): UUID?
 
 
 }

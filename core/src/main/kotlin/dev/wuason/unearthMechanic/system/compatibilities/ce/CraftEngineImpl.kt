@@ -1,12 +1,5 @@
-package dev.wuason.unearthMechanic.system.compatibilities.ia
+package dev.wuason.unearthMechanic.system.compatibilities.ce
 
-import dev.lone.itemsadder.api.CustomBlock
-import dev.lone.itemsadder.api.CustomFurniture
-import dev.lone.itemsadder.api.Events.CustomBlockBreakEvent
-import dev.lone.itemsadder.api.Events.CustomBlockInteractEvent
-import dev.lone.itemsadder.api.Events.FurnitureBreakEvent
-import dev.lone.itemsadder.api.Events.FurnitureInteractEvent
-import dev.lone.itemsadder.api.Events.FurniturePlaceEvent
 import dev.wuason.libs.adapter.AdapterComp
 import dev.wuason.libs.adapter.AdapterData
 import dev.wuason.unearthMechanic.UnearthMechanicPlugin
@@ -16,10 +9,17 @@ import dev.wuason.unearthMechanic.system.StageData
 import dev.wuason.unearthMechanic.system.StageManager
 import dev.wuason.unearthMechanic.system.compatibilities.ICompatibility
 import dev.wuason.unearthMechanic.utils.Utils
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes.entity
+import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks
+import net.momirealms.craftengine.bukkit.api.CraftEngineFurniture
+import net.momirealms.craftengine.bukkit.api.event.CustomBlockBreakEvent
+import net.momirealms.craftengine.bukkit.api.event.CustomBlockInteractEvent
+import net.momirealms.craftengine.bukkit.api.event.FurnitureBreakEvent
+import net.momirealms.craftengine.bukkit.api.event.FurnitureInteractEvent
+import net.momirealms.craftengine.bukkit.api.event.FurniturePlaceEvent
+import net.momirealms.craftengine.core.entity.player.InteractionHand
+import net.momirealms.craftengine.libraries.nbt.CompoundTag
 import org.bukkit.Bukkit
 import org.bukkit.Location
-import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.entity.Entity
@@ -28,24 +28,22 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
-import org.bukkit.event.block.Action
-import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.bukkit.persistence.PersistentDataType
+
+import net.momirealms.craftengine.core.util.Key
+import net.momirealms.craftengine.core.entity.furniture.AnchorType
 import java.util.Collections
 import java.util.UUID
-import kotlin.collections.set
 
-class ItemsAdderImpl(
+class CraftEngineImpl(
     pluginName: String,
     private val core: UnearthMechanicPlugin,
     private val stageManager: StageManager,
-    adapterComp: AdapterComp
+    adapterComp: AdapterComp,
 ) : ICompatibility(
     pluginName,
     adapterComp
 ) {
-
     private val removedLocations = Collections.synchronizedSet(mutableSetOf<Location>())
 
     override fun isRemoving(location: Location): Boolean {
@@ -73,14 +71,14 @@ class ItemsAdderImpl(
         val world = location.world ?: return null
 
         val entities = world.getNearbyEntities(location, 1.0, 1.0, 1.0)
-
         for (entity in entities) {
             try {
-                val furniture = CustomFurniture.byAlreadySpawned(entity)
+                val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
                 if (furniture != null) {
                     return entity.uniqueId
                 }
             } catch (e: Exception) {
+                // Si lanza error es porque esa entidad no es un mueble válido
                 continue
             }
         }
@@ -89,19 +87,21 @@ class ItemsAdderImpl(
     }
 
     override fun isValid(loc: Location, expectedAdapterId: String?): Boolean {
+        val blockLoc = loc.block.location
         val world = loc.world ?: return false
 
-        // Check for furniture
-        val nearby = world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+        val nearby = world.getNearbyEntities(blockLoc, 0.5, 1.0, 0.5)
         for (entity in nearby) {
-            try {
-                val furniture = CustomFurniture.byAlreadySpawned(entity)
-                if (furniture != null && entity.isValid && !entity.isDead) {
-                    //Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] isValid: furniture válido encontrado en $location (${furniture.namespace}:${furniture.id})")
+            val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
+            if (furniture != null) {
+                val id = furniture.id().toString()
+                if (expectedAdapterId == null) {
                     return true
                 }
-            } catch (_: Exception) {
-                continue
+                // Verifica si el ID coincide con el esperado
+                if (id.equals(expectedAdapterId, ignoreCase = true)) {
+                    return true
+                }
             }
         }
         if (loc.block.type != org.bukkit.Material.AIR) return true
@@ -111,111 +111,81 @@ class ItemsAdderImpl(
 
     @EventHandler
     fun onInteractBlock(event: CustomBlockInteractEvent) {
-        if (event.action == Action.RIGHT_CLICK_BLOCK && event.hand == EquipmentSlot.HAND) {
-            stageManager.interact(
-                event.player,
-                "ia:" + event.namespacedID,
-                event.blockClicked.location,
-                event,
-                this
-            )
-        }
+        if (event.hand() != InteractionHand.MAIN_HAND) return
+        val adapterId = "ce:" + event.customBlock().id()
+
+        stageManager.interact(event.player(),
+            adapterId,
+            event.location(),
+            event,
+            this)
     }
 
     @EventHandler
     fun onInteractFurniture(event: FurnitureInteractEvent) {
-        if (stageManager.isTransitioning(event.bukkitEntity.location.block.location)) {
-            //Bukkit.getConsoleSender().sendMessage("[DEBUG] Bloqueado por transición en ${event.bukkitEntity.location.block.location}")
+        if (stageManager.isTransitioning(event.furniture().baseEntity().location.block.location)) {
             event.isCancelled = true
             return
         }
 
-        val uuid = event.bukkitEntity.uniqueId
-        //val currentTick = Bukkit.getCurrentTick().toLong()
-        //Bukkit.getConsoleSender().sendMessage("[UM] onInteractFurniture aplicado para $uuid en $currentTick")
-
-        if (event.bukkitEntity != null && event.bukkitEntity.uniqueId == uuid) {
-            val adapterId = "ia:" + event.namespacedID
+        if (event.furniture().baseEntity() != null) {
+            val adapterId = "ce:" + event.furniture().id()
             stageManager.interact(
                 event.player,
                 adapterId,
-                event.bukkitEntity.location,
+                event.location(),
                 event,
-                this
-            )
+                this)
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onBlockBreak(event: CustomBlockBreakEvent) {
-        StageData.removeStageData(event.block)
+        StageData.removeStageData(event.bukkitBlock())
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onFurnitureBreak(event: FurnitureBreakEvent) {
-        if (stageManager.isTransitioning(event.bukkitEntity.location.block.location)) {
-            //Bukkit.getConsoleSender().sendMessage("[DEBUG] Bloqueado por transición en ${event.bukkitEntity.location.block.location}")
+        if (stageManager.isTransitioning(event.furniture().baseEntity().location.block.location)) {
             event.isCancelled = true
             return
         }
 
-        if (stageManager.activeSequences.contains(event.bukkitEntity.location.block.location)) {
-            //Bukkit.getConsoleSender().sendMessage("[UM] onFurnitureBreak Cancelado por SECUENCIA en ${event.bukkitEntity.location}")
-            stageManager.cancelSequence(this, event.bukkitEntity.location.block.location)
-            event.isCancelled = true
-            return
-        }
-
-        val loc = event.bukkitEntity.location.block.location
+        val loc = event.furniture().baseEntity().location.block.location
 
         removeStageData(loc)
         setRemoving(loc)
-
-        if(!isRemoving(loc)){
-            if(!stageManager.activeSequences.contains(loc)){
-                clearRemoving(loc)
-            }
-        }
     }
 
     @EventHandler
     fun onFurniturePlace(event: FurniturePlaceEvent) {
-        val player = event.player
-        val idPlaced = event.namespacedID
-
-        Bukkit.getScheduler().runTaskLater(core, Runnable {
-            val nearby = player.world.getNearbyEntities(player.location, 5.0, 5.0, 5.0)
-
-            val furniture = nearby
-                .filterIsInstance<ItemFrame>()
-                .firstOrNull { frame ->
-                    val key = NamespacedKey("itemsadder", "placeable_entity_item")
-                    val entityId = frame.persistentDataContainer.get(key, PersistentDataType.STRING)
-                    entityId == idPlaced
-                }
-
-            furniture?.let {
-                clearRemoving(it.location.block.location)
-                //Bukkit.getConsoleSender().sendMessage("[DEBUG] Furniture desbloqueado en ${it.location.block.location}")
-            }
-        }, 3L)
+        clearRemoving(event.furniture().location().block.location)
     }
 
     private fun placeBlock(adapterId: String, location: Location?) {
-        CustomBlock.place(adapterId.replace("ia:", ""), location)
+        val furnitureId = Key.of(adapterId.replace("ce:", ""))
+        val furniture = CraftEngineFurniture.byId(furnitureId)
+        val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+
+        CraftEngineFurniture.place(location,
+            furnitureId,
+            anchor,
+            false)
     }
 
     private fun breakBlock(location: Location?) {
-        CustomBlock.remove(location)
+        if (location != null) {
+            CraftEngineBlocks.remove(location.block)
+        }
     }
 
-    private fun replaceFurniture(adapterId: String, entity: Entity?) {
-        val customFurniture = CustomFurniture.byAlreadySpawned(entity)
-        customFurniture!!.replaceFurniture(adapterId.replace("ia:", ""))
+    private fun replaceFurniture(adapterId: String, entity: Entity) {
+        //val customFurniture = CustomFurniture.byAlreadySpawned(entity)
+        //customFurniture!!.replaceFurniture(adapterId.replace("ce:", ""))
     }
 
-    private fun breakFurniture(entity: Entity?, player: Player?) {
-        CustomFurniture.remove(entity, false)
+    private fun breakFurniture(entity: Entity, player: Player?) {
+        CraftEngineFurniture.remove(entity)
     }
 
     override fun handleStage(
@@ -227,8 +197,6 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        //Bukkit.getConsoleSender().sendMessage("[UM][ItemsAdderImpl] handleStage ejecutado con adapterData: ${stage.getAdapterData()?.adapter?.type}:${stage.getAdapterData()?.id}")
-        //Bukkit.getConsoleSender().sendMessage("[UM] handleStage en $loc - TICK: ${Bukkit.getCurrentTick()}")
         if (stage is IBlockStage) {
             handleBlockStage(player, itemAdapterData, event, loc, toolUsed, generic, stage)
         } else if (stage is IFurnitureStage) {
@@ -263,7 +231,13 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        placeBlock(itemAdapterData.id, loc)
+        CraftEngineBlocks.place(
+            loc,
+            Key.of(itemAdapterData.id.removePrefix("ce:")),
+            CompoundTag(),
+            false
+        )
+        //placeBlock(itemAdapterData.id, loc)
     }
 
     private fun handleFurnitureStage(
@@ -277,59 +251,59 @@ class ItemsAdderImpl(
     ) {
         if(isRemoving(loc.block.location)){
             if(!stageManager.activeSequences.contains(loc.block.location)){
-                clearRemoving(loc.block.location) }
-            //Bukkit.getConsoleSender().sendMessage("[UM] Bloqueada recolocación definitiva en ${loc.block.location}")
+                clearRemoving(loc.block.location)
+                }
             return
         }
 
         if (event is FurnitureInteractEvent) {
+            event.isCancelled = true
 
-            val entityEvent: Entity = event.bukkitEntity
-            if(!entityEvent.isValid) {
-                //Bukkit.getConsoleSender().sendMessage(" NO ES VALIDO EL FURNITURE" +loc)
-                return
-            }
+            val entityEvent: Entity = event.furniture().baseEntity()
 
-            //if(isRemoving(loc.block.location)) return
+            if (!entityEvent.isValid || entityEvent.isDead) return
+
+            // Cancel automatic drop (just in case)
+            CraftEngineFurniture.remove(event.furniture().baseEntity())
+
+            // Spawn of the new furniture
+            val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+            val furniture = CraftEngineFurniture.byId(furnitureId)
+            val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+
             if(isRemoving(loc.block.location)){
-                if(!stageManager.activeSequences.contains(event.bukkitEntity.location.block.location)){
-                    clearRemoving(event.bukkitEntity.location.block.location)
-                }
-                //Bukkit.getConsoleSender().sendMessage("Spawn cancelado en $loc - adapter ${itemAdapterData.id}")
+                if(!stageManager.activeSequences.contains(loc.block.location)){
+                    clearRemoving(loc.block.location) }
                 return
             }
+            CraftEngineFurniture.place(loc,
+                furnitureId,
+                anchor,
+                false)?.let { customFurniture ->
 
-            if(isValid(loc, itemAdapterData.toString())){
-                event.furniture?.remove(false)
-                event.bukkitEntity.remove()
-                breakBlock(event.bukkitEntity.location)
-            }else{
-                breakBlock(event.bukkitEntity.location)
-            }
-            CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                //Bukkit.getConsoleSender().sendMessage("[IA] spawn furniture at $loc - adapter ${itemAdapterData.id}")
-                val entity: Entity = customFurniture.entity ?: return
-
+                val entity: Entity = customFurniture.baseEntity() ?: return
                 entity.setRotation(entityEvent.location.yaw, entityEvent.location.pitch)
 
-                CustomFurniture.byAlreadySpawned(loc.block)?.entity?.let { entity ->
+                CraftEngineFurniture.isFurniture(entity)?.let { entity ->
                     rotationMap[loc] = Pair(entityEvent.location.yaw, entityEvent.location.pitch)
                 }
 
-                if (entityEvent is ItemFrame && entity is ItemFrame) {
-                    entity.rotation = entityEvent.rotation
-                    itemFrameRotationMap[loc] = entityEvent.rotation
+                if (entity is ItemFrame && entity is ItemFrame) {
+                    entity.rotation = entity.rotation
+                    itemFrameRotationMap[loc] = entity.rotation
                 }
-
             }
             Bukkit.getScheduler().runTaskLater(core, Runnable {
-                if(!stageManager.activeSequences.contains(event.bukkitEntity.location.block.location)){
-                    //Bukkit.getConsoleSender().sendMessage("clearRemoving "+event.bukkitEntity.location.block.location)
-                    clearRemoving(event.bukkitEntity.location.block.location)
+                if(!stageManager.activeSequences.contains(event.furniture().baseEntity().location.block.location)){
+                    clearRemoving(event.furniture().baseEntity().location.block.location)
                 }
             }, 5L)
-        } else {
+        }else{
             // Sequence System
+            val furnitureId = Key.of(itemAdapterData.id.removePrefix("ce:"))
+            val furniture = CraftEngineFurniture.byId(furnitureId)
+            val anchor = furniture?.getAnyAnchorType() ?: AnchorType.GROUND
+
             val rotation = rotationMap.remove(loc)
             val cachedFrameRotation = itemFrameRotationMap[loc]
 
@@ -338,9 +312,12 @@ class ItemsAdderImpl(
                     clearRemoving(loc.block.location) }
                 return
             }
-            CustomFurniture.spawn(itemAdapterData.id, loc.block)?.let { customFurniture ->
-                val entity: Entity = customFurniture.entity ?: return
-                //Bukkit.getConsoleSender().sendMessage("[IA] spawn Sequence $loc - adapter ${itemAdapterData.id}")
+            CraftEngineFurniture.place(loc,
+                furnitureId,
+                anchor,
+                false)?.let { customFurniture ->
+
+                val entity: Entity = customFurniture.baseEntity() ?: return
 
                 if (rotation != null) entity.setRotation(rotation.first, rotation.second)
                 if (cachedFrameRotation != null && entity is ItemFrame) {
@@ -358,29 +335,34 @@ class ItemsAdderImpl(
         generic: IGeneric,
         stage: IStage
     ) {
-        /*CustomFurniture.byAlreadySpawned(loc.block)?.entity?.let { entity ->
-            rotationMap[loc] = Pair(entity.location.yaw, entity.location.pitch)
-        }*/
         if (event is CustomBlockInteractEvent) {
-            breakBlock(loc)
+            //breakBlock(loc)
+            CraftEngineBlocks.remove(event.bukkitBlock())
             return
         }
         if (event is FurnitureInteractEvent) {
-            event.bukkitEntity?.let { entity ->
+            event.furniture().baseEntity()?.let { entity ->
                 rotationMap[entity.location] = Pair(entity.location.yaw, entity.location.pitch)
             }
-            setRemoving(event.bukkitEntity.location.block.location)
+            setRemoving(event.furniture().baseEntity().location.block.location)
 
-            //Bukkit.getConsoleSender().sendMessage("[IA] Furniture removido en $loc")
-            val uuid = event.bukkitEntity.uniqueId
-            removeStageData(event.bukkitEntity.location.block.location)
-            event.furniture?.remove(false)
+            removeStageData(event.furniture().baseEntity().location.block.location)
+            CraftEngineFurniture.remove(event.furniture().baseEntity())
             return
         }
 
         // Sequence System
-        val furniture = CustomFurniture.byAlreadySpawned(loc.block)
-        furniture?.remove(false)
+        val nearby = loc.world.getNearbyEntities(loc, 0.5, 1.0, 0.5)
+        for (entity in nearby) {
+            try {
+                val furniture = CraftEngineFurniture.getLoadedFurnitureByBaseEntity(entity)
+                if (furniture != null && entity.isValid && !entity.isDead) {
+                    CraftEngineFurniture.remove(entity)
+                }
+            } catch (_: Exception) {
+                continue
+            }
+        }
         if (loc.block.type != org.bukkit.Material.AIR) {
             breakBlock(loc)
         }
@@ -395,7 +377,7 @@ class ItemsAdderImpl(
         stage: Int
     ): Int {
         if (event is CustomBlockInteractEvent) {
-            val block: Block = event.blockClicked
+            val block: Block = event.bukkitBlock()
             return Utils.calculateHashCode(
                 block.location.hashCode(),
                 block.hashCode(),
@@ -405,7 +387,7 @@ class ItemsAdderImpl(
             )
         }
         if (event is FurnitureInteractEvent) {
-            val entity: Entity = event.bukkitEntity
+            val entity: Entity = event.furniture().baseEntity()
             return Utils.calculateHashCode(
                 entity.location.hashCode(),
                 entity.hashCode(),
@@ -420,14 +402,14 @@ class ItemsAdderImpl(
 
     override fun getItemHand(event: Event): ItemStack? {
         if (event is CustomBlockInteractEvent) {
-            return event.item
+            return event.item()
         }
         return null
     }
 
     override fun getBlockFace(event: Event): BlockFace? {
         if (event is CustomBlockInteractEvent) {
-            return event.blockFace
+            return event.clickedFace()
         }
         return null
     }
