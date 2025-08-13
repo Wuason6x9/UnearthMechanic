@@ -3,7 +3,6 @@ package dev.wuason.unearthMechanic.system
 import com.sk89q.wepif.bPermissionsResolver
 import dev.wuason.libs.adapter.Adapter
 import dev.wuason.libs.adapter.AdapterData
-import dev.wuason.libs.protectionlib.ProtectionLib
 import dev.wuason.mechanics.utils.AdventureUtils
 import dev.wuason.unearthMechanic.UnearthMechanic
 import dev.wuason.unearthMechanic.compatibilities.LuckPermsComp
@@ -166,11 +165,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 || player.hasPermission("unearthMechanic.bypass")
                 || generic.isNotProtect()
                 || (
-                !WorldGuardPlugin.isWorldGuardEnabled() && ProtectionLib.canInteract(player, location)
+                !WorldGuardPlugin.isWorldGuardEnabled() && core.mechanics.antiGriefLib.canInteract(player, location)
                 )
                 || (
                 WorldGuardPlugin.isWorldGuardEnabled()
-                        && ProtectionLib.canInteract(player, location)
+                        && core.mechanics.antiGriefLib.canInteract(player, location)
                         && core.getWorldGuardComp().canInteractCustom(player, location)
                 )
     }
@@ -213,11 +212,11 @@ class StageManager(private val core: UnearthMechanic) : IStageManager {
                 || player.hasPermission("unearthMechanic.bypass")
                 || generic.isNotProtect()
                 || (
-                !WorldGuardPlugin.isWorldGuardEnabled() && ProtectionLib.canInteract(player, location)
+                !WorldGuardPlugin.isWorldGuardEnabled() && core.mechanics.antiGriefLib.canInteract(player, location)
                 )
                 || (
                 WorldGuardPlugin.isWorldGuardEnabled()
-                        && ProtectionLib.canInteract(player, location)
+                        && core.mechanics.antiGriefLib.canInteract(player, location)
                         && core.getWorldGuardComp().canInteractCustom(player, location)
                 )
     }
